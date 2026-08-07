@@ -57,7 +57,7 @@ router.post('/extract-image', upload.single('image'), async (req, res) => {
   }
 
   try {
-    const rawText = await extractTextFromImage(req.file.buffer);
+    const rawText = await extractTextFromImage(req.file.buffer, req.file.mimetype);
     const artists = parseArtistsFromText(rawText);
     console.log(
       `OCR on "${req.file.originalname}": extracted ${rawText.length} chars, parsed ${artists.length} artist candidates`

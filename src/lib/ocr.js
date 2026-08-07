@@ -16,8 +16,14 @@ const os = require('os');
  * environments — surface as real errors with a stage attached, instead of
  * quietly resolving to empty text.
  */
-async function extractTextFromImage(imageBuffer) {
-  console.log(`[ocr] Starting OCR on a ${imageBuffer.length}-byte image`);
+async function extractTextFromImage(imageBuffer, mimeType = 'image/png') {
+  console.log(`[ocr] Starting OCR on a ${imageBuffer.length}-byte image (${mimeType})`);
+
+  // tesseract.js has a known bug where passing a raw Node Buffer can
+  // silently succeed with 0 characters / 0 confidence instead of throwing
+  // (https://github.com/naptha/tesseract.js/issues/886). Passing a base64
+  // data URL string instead goes through a more reliable code path.
+  const dataUrl = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
 
   let worker;
   try {
@@ -34,7 +40,7 @@ async function extractTextFromImage(imageBuffer) {
   }
 
   try {
-    const { data } = await worker.recognize(imageBuffer);
+    const { data } = await worker.recognize(dataUrl);
     console.log(`[ocr] Recognition complete: ${data.text.length} characters, confidence ${data.confidence}`);
     return data.text;
   } catch (err) {
