@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: rtd-ready-to-dance
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: SOUNDCLOUD_CLIENT_ID
+        sync: false
+      - key: SOUNDCLOUD_CLIENT_SECRET
+        sync: false
+      - key: SOUNDCLOUD_REDIRECT_URI
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

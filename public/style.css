@@ -1,0 +1,153 @@
+:root {
+  --bg: #0b0b0f;
+  --surface: #16151d;
+  --accent: #ff5500; /* SoundCloud orange */
+  --text: #f4f2ef;
+  --muted: #9b98a3;
+  --border: #2a2833;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #1a1720 0%, var(--bg) 60%);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 20px 80px;
+}
+
+header h1 {
+  font-size: 2.6rem;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+header .subtitle {
+  font-size: 1rem;
+  color: var(--accent);
+  font-weight: 600;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.tagline {
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.auth-status {
+  margin-top: 16px;
+  font-size: 0.9rem;
+}
+
+.auth-status a, .auth-status button {
+  color: var(--accent);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 32px;
+}
+
+input[type="url"], input[type="text"] {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+button {
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.hidden { display: none; }
+
+.event-info {
+  margin-top: 32px;
+}
+
+.event-info h2 {
+  margin-bottom: 4px;
+}
+
+.lineup {
+  margin-top: 24px;
+  display: grid;
+  gap: 10px;
+}
+
+.artist-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.artist-card .name {
+  font-weight: 600;
+}
+
+.artist-card .match {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.artist-card.no-match .match {
+  color: #c25b4a;
+}
+
+.playlist-actions {
+  margin-top: 28px;
+  display: flex;
+  gap: 10px;
+}
+
+.result {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.result a {
+  color: var(--accent);
+}

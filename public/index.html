@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RTD — Ready to Dance</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>RTD <span class="subtitle">Ready to Dance</span></h1>
+      <p class="tagline">Paste a Resident Advisor event link. Get a SoundCloud playlist of the lineup.</p>
+      <div id="auth-status" class="auth-status"></div>
+    </header>
+
+    <section class="input-row">
+      <input id="ra-url" type="url" placeholder="https://ra.co/events/..." />
+      <button id="fetch-btn">Find lineup</button>
+    </section>
+
+    <section id="event-info" class="event-info hidden"></section>
+
+    <section id="lineup" class="lineup hidden"></section>
+
+    <section id="playlist-actions" class="playlist-actions hidden">
+      <input id="playlist-title" type="text" placeholder="Playlist name" />
+      <button id="create-playlist-btn">Create SoundCloud playlist</button>
+    </section>
+
+    <section id="result" class="result hidden"></section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
