@@ -10,16 +10,28 @@
   <div class="wrap">
     <header>
       <h1>RTD <span class="subtitle">Ready to Dance</span></h1>
-      <p class="tagline">Paste a Resident Advisor event link. Get a SoundCloud playlist of the lineup.</p>
+      <p class="tagline">Paste a lineup, or upload a screenshot of one. Get a SoundCloud playlist.</p>
       <div id="auth-status" class="auth-status"></div>
     </header>
 
-    <section class="input-row">
-      <input id="ra-url" type="url" placeholder="https://ra.co/events/..." />
-      <button id="fetch-btn">Find lineup</button>
+    <section class="input-tabs">
+      <button id="tab-paste" class="tab active">Paste text</button>
+      <button id="tab-image" class="tab">Upload screenshot</button>
     </section>
 
-    <section id="event-info" class="event-info hidden"></section>
+    <section id="paste-panel" class="panel">
+      <textarea id="lineup-text" rows="6" placeholder="One artist per line, or comma-separated&#10;e.g.&#10;Acid Arab&#10;Âme b2b Trikk&#10;Floating Points"></textarea>
+    </section>
+
+    <section id="image-panel" class="panel hidden">
+      <input id="lineup-image" type="file" accept="image/*" />
+      <button id="extract-btn" class="secondary">Extract text from image</button>
+      <p class="hint">Works best with a clear, cropped screenshot of just the lineup text.</p>
+    </section>
+
+    <section class="input-row">
+      <button id="find-btn">Find artists on SoundCloud</button>
+    </section>
 
     <section id="lineup" class="lineup hidden"></section>
 

@@ -1,14 +1,14 @@
 # RTD — Ready to Dance 🕺
 
-Paste a Resident Advisor event link, get a SoundCloud playlist of the lineup's artists.
+Paste a lineup — or upload a screenshot of one — and get a SoundCloud playlist of the artists.
 
 ## What's here
 
 - `server.js` — Express app entry point
 - `src/routes/auth.js` — SoundCloud login (OAuth 2.1 + PKCE, "Connect with SoundCloud")
-- `src/routes/api.js` — the actual app logic: parse lineup → match artists → create playlist
+- `src/routes/api.js` — the actual app logic: OCR/text parsing → match artists → create playlist
 - `src/lib/soundcloud.js` — SoundCloud API client (Client Credentials + Authorization Code flows)
-- `src/lib/raScraper.js` — Resident Advisor event page parser
+- `src/lib/ocr.js` — runs OCR (Tesseract.js) on an uploaded lineup screenshot
 - `public/` — the frontend (plain HTML/CSS/JS, no build step)
 
 ## Setup
@@ -43,36 +43,38 @@ Paste a Resident Advisor event link, get a SoundCloud playlist of the lineup's a
 
 ## How it works
 
-1. Paste an RA event URL → `/api/lineup` scrapes the page and extracts artist names.
-2. `/api/match` searches SoundCloud for tracks matching each artist name
-   (works even if you're not logged in — this part uses the app's own
-   Client Credentials token for public data).
+1. Either paste the lineup as text (one artist per line, or comma-separated),
+   or upload a screenshot of a lineup poster — `/api/extract-image` runs OCR
+   on it and pre-fills the text box with what it found, so you can review
+   and correct it before continuing (OCR accuracy varies a lot depending on
+   the poster's font/layout, hence the review step rather than trusting it
+   blindly).
+2. "Find artists on SoundCloud" (`/api/match`) searches SoundCloud for
+   tracks matching each artist name — works even if you're not logged in,
+   using the app's own Client Credentials token for public data.
 3. Click "Connect with SoundCloud" to log in with your own account
    (Authorization Code + PKCE flow).
 4. "Create SoundCloud playlist" builds a playlist on **your** account from
    the matched tracks (takes up to 2 tracks per artist by default — tweak
    that in `public/app.js`).
 
-## Known rough edges — things worth checking once you're live
+## Known rough edges
 
-- **`raScraper.js` is unverified against a live RA page.** It was written
-  from general knowledge of how RA's site is structured (a Next.js site
-  with a `__NEXT_DATA__` JSON blob, falling back to scanning for
-  `/dj/` or `/artist/` profile links). If you get an empty lineup, open a
-  real event page's dev tools, search the HTML for `__NEXT_DATA__` or the
-  artist names, and adjust `extractFromNextData` / `extractFromDom`
-  accordingly.
-- **Artist matching is a simple text search**, so a common artist name
-  (or an artist with a sparse SoundCloud presence) may return an
-  unrelated or empty result. The lineup screen shows a "no match" tag for
-  anything with zero hits so you can spot these before creating the
-  playlist.
+- **OCR quality depends heavily on the image.** A clean, cropped screenshot
+  of just the lineup text works best. Stylised festival poster fonts,
+  low-resolution images, or busy backgrounds will produce messier results —
+  that's exactly why the extracted text lands in an editable box instead of
+  being used directly.
+- **Artist matching is a simple text search**, so a common artist name (or
+  one with a sparse SoundCloud presence) may return an unrelated or empty
+  result. The lineup screen shows a "no match" tag for anything with zero
+  hits so you can spot these before creating the playlist.
 - **SoundCloud's Development Mode caps the app at 5 authorized users** —
   add the emails of everyone who should be able to log in via the app's
   dashboard settings, or they'll hit an authorization error.
-- Sessions are stored in a signed cookie (`cookie-session`), which is
-  fine for a small personal app but means logging in on a new device
-  is a fresh session — there's no shared user database.
+- Sessions are stored in a signed cookie (`cookie-session`), which is fine
+  for a small personal app but means logging in on a new device is a fresh
+  session — there's no shared user database.
 
 ## Deploying (Render, free tier)
 
@@ -118,4 +120,3 @@ This is a plain Node/Express app, so it deploys easily. Steps for Render
 Free tier notes: Render's free web services spin down after inactivity and
 take ~30-60 seconds to wake up on the first request after a while — normal
 for a small personal project, not a bug.
-

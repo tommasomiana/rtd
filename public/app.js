@@ -1,7 +1,12 @@
 const authStatusEl = document.getElementById('auth-status');
-const fetchBtn = document.getElementById('fetch-btn');
-const raUrlInput = document.getElementById('ra-url');
-const eventInfoEl = document.getElementById('event-info');
+const tabPaste = document.getElementById('tab-paste');
+const tabImage = document.getElementById('tab-image');
+const pastePanel = document.getElementById('paste-panel');
+const imagePanel = document.getElementById('image-panel');
+const lineupTextEl = document.getElementById('lineup-text');
+const lineupImageEl = document.getElementById('lineup-image');
+const extractBtn = document.getElementById('extract-btn');
+const findBtn = document.getElementById('find-btn');
 const lineupEl = document.getElementById('lineup');
 const playlistActionsEl = document.getElementById('playlist-actions');
 const playlistTitleInput = document.getElementById('playlist-title');
@@ -25,48 +30,82 @@ async function refreshAuthStatus() {
   }
 }
 
-fetchBtn.onclick = async () => {
-  const eventUrl = raUrlInput.value.trim();
-  if (!eventUrl) return;
+tabPaste.onclick = () => switchTab('paste');
+tabImage.onclick = () => switchTab('image');
 
-  setLoading(fetchBtn, true, 'Finding lineup...');
-  eventInfoEl.classList.add('hidden');
+function switchTab(which) {
+  const isPaste = which === 'paste';
+  tabPaste.classList.toggle('active', isPaste);
+  tabImage.classList.toggle('active', !isPaste);
+  pastePanel.classList.toggle('hidden', !isPaste);
+  imagePanel.classList.toggle('hidden', isPaste);
+}
+
+extractBtn.onclick = async () => {
+  const file = lineupImageEl.files[0];
+  if (!file) {
+    showResult('Choose an image first.', true);
+    return;
+  }
+
+  setLoading(extractBtn, true, 'Reading image...');
+  try {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const res = await fetch('/api/extract-image', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    // Prefill the paste textarea with what OCR found, and switch to it so
+    // the user can review/correct before matching.
+    lineupTextEl.value = data.artists.join('\n');
+    switchTab('paste');
+    showResult(
+      `Extracted ${data.artists.length} possible artist names — review and edit the list above before continuing.`,
+      false
+    );
+  } catch (err) {
+    showResult(err.message, true);
+  } finally {
+    setLoading(extractBtn, false, 'Extract text from image');
+  }
+};
+
+findBtn.onclick = async () => {
+  const artists = lineupTextEl.value
+    .split(/[\n,]/)
+    .map((a) => a.trim())
+    .filter(Boolean);
+
+  if (artists.length === 0) {
+    showResult('Add at least one artist name first.', true);
+    return;
+  }
+
+  setLoading(findBtn, true, 'Matching artists on SoundCloud...');
   lineupEl.classList.add('hidden');
   playlistActionsEl.classList.add('hidden');
   resultEl.classList.add('hidden');
 
   try {
-    const lineupRes = await fetch('/api/lineup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventUrl }),
-    });
-    const lineupData = await lineupRes.json();
-    if (!lineupRes.ok) throw new Error(lineupData.error);
-
-    eventInfoEl.innerHTML = `<h2>${lineupData.eventTitle || 'Event'}</h2>
-      <p>${lineupData.artists.length} artists found</p>`;
-    eventInfoEl.classList.remove('hidden');
-
-    setLoading(fetchBtn, true, 'Matching artists on SoundCloud...');
-
     const matchRes = await fetch('/api/match', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ artists: lineupData.artists }),
+      body: JSON.stringify({ artists }),
     });
     const matchData = await matchRes.json();
     if (!matchRes.ok) throw new Error(matchData.error);
 
     currentMatches = matchData.matches;
-    renderLineup(lineupData.artists, currentMatches);
+    renderLineup(artists, currentMatches);
 
-    playlistTitleInput.value = lineupData.eventTitle || 'RTD Playlist';
+    playlistTitleInput.value = 'RTD Playlist';
     playlistActionsEl.classList.remove('hidden');
   } catch (err) {
     showResult(err.message, true);
   } finally {
-    setLoading(fetchBtn, false, 'Find lineup');
+    setLoading(findBtn, false, 'Find artists on SoundCloud');
   }
 };
 

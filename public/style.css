@@ -57,20 +57,66 @@ header .subtitle {
   text-decoration: underline;
 }
 
-.input-row {
+.input-tabs {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-top: 32px;
 }
 
-input[type="url"], input[type="text"] {
-  flex: 1;
+.tab {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 10px 16px;
+  border-radius: 8px 8px 0 0;
+  font-weight: 600;
+}
+
+.tab.active {
+  color: var(--text);
+  border-bottom-color: var(--surface);
+  background: var(--surface);
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0 10px 10px 10px;
+  padding: 16px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 130px;
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg);
   color: var(--text);
   font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.panel input[type="file"] {
+  color: var(--muted);
+  margin-bottom: 12px;
+  display: block;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 10px;
+}
+
+.input-row {
+  margin-top: 20px;
+}
+
+.input-row button {
+  width: 100%;
 }
 
 button {
@@ -96,6 +142,16 @@ button.secondary {
 }
 
 .hidden { display: none; }
+
+input[type="text"] {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+}
 
 .event-info {
   margin-top: 32px;

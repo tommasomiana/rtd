@@ -1,8 +1,13 @@
 const express = require('express');
+const multer = require('multer');
 const sc = require('../lib/soundcloud');
-const { scrapeRAEvent } = require('../lib/raScraper');
+const { extractTextFromImage } = require('../lib/ocr');
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
+});
 
 // Makes sure req.session.soundcloud.access_token is valid, refreshing if needed
 async function ensureFreshToken(req) {
@@ -22,25 +27,42 @@ async function ensureFreshToken(req) {
   return req.session.soundcloud.access_token;
 }
 
-// POST /api/lineup { eventUrl }
-router.post('/lineup', async (req, res) => {
-  const { eventUrl } = req.body;
-  if (!eventUrl || !eventUrl.includes('ra.co')) {
-    return res.status(400).json({ error: 'Please provide a valid ra.co event URL.' });
+// Splits raw free-form text (pasted or OCR'd) into a clean artist list.
+// Handles one-per-line and comma-separated input, and common lineup poster
+// noise (b2b / live / DJ set labels, empty lines, stray punctuation).
+function parseArtistsFromText(rawText) {
+  if (!rawText) return [];
+
+  const noiseWords = new Set(['b2b', 'live', 'dj set', 'dj', 'presents', 'w/']);
+
+  return rawText
+    .split(/[\n,]/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !noiseWords.has(line.toLowerCase()))
+    .filter((line) => line.length >= 2 && line.length <= 60)
+    // de-dupe, case-insensitive, keep first-seen casing
+    .filter((line, idx, arr) => {
+      const lower = line.toLowerCase();
+      return arr.findIndex((l) => l.toLowerCase() === lower) === idx;
+    });
+}
+
+// POST /api/extract-image  (multipart form, field name "image")
+// Runs OCR on an uploaded lineup screenshot and returns the raw text plus
+// a best-effort parsed artist list, for the user to review/edit before matching.
+router.post('/extract-image', upload.single('image'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image uploaded.' });
   }
 
   try {
-    const result = await scrapeRAEvent(eventUrl);
-    if (!result.artists.length) {
-      return res.status(422).json({
-        error:
-          'Could not find any artists on that page. RA may have changed their markup — see raScraper.js for where to adjust it.',
-      });
-    }
-    res.json(result);
+    const rawText = await extractTextFromImage(req.file.buffer);
+    const artists = parseArtistsFromText(rawText);
+    res.json({ rawText, artists });
   } catch (err) {
-    console.error('Scrape failed:', err.message);
-    res.status(500).json({ error: 'Failed to fetch or parse that event page.' });
+    console.error('OCR failed:', err.message);
+    res.status(500).json({ error: 'Failed to read text from that image.' });
   }
 });
 
