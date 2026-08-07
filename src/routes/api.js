@@ -59,6 +59,9 @@ router.post('/extract-image', upload.single('image'), async (req, res) => {
   try {
     const rawText = await extractTextFromImage(req.file.buffer);
     const artists = parseArtistsFromText(rawText);
+    console.log(
+      `OCR on "${req.file.originalname}": extracted ${rawText.length} chars, parsed ${artists.length} artist candidates`
+    );
     res.json({ rawText, artists });
   } catch (err) {
     console.error('OCR failed:', err.message);
@@ -82,13 +85,15 @@ router.post('/match', async (req, res) => {
     const results = {};
     for (const artist of artists) {
       try {
-        const tracks = await sc.searchArtistTracks(artist, token, 5);
+        const tracks = await sc.searchArtistTracks(artist, token, 20);
         results[artist] = tracks.map((t) => ({
           id: t.id,
           title: t.title,
           permalink_url: t.permalink_url,
           artwork_url: t.artwork_url,
           user: t.user?.username,
+          playback_count: t.playback_count || 0,
+          created_at: t.created_at || null,
         }));
       } catch (err) {
         console.error(`Search failed for "${artist}":`, err.response?.data || err.message);

@@ -101,12 +101,12 @@ async function refreshToken(refresh_token) {
 
 // --- API calls ----------------------------------------------------------
 
-async function searchArtistTracks(artistName, token, limit = 5) {
+async function searchArtistTracks(artistName, token, poolSize = 15) {
   const res = await axios.get(`${API_BASE}/tracks`, {
     headers: { Authorization: `OAuth ${token}` },
-    params: { q: artistName, limit },
+    params: { q: artistName, limit: poolSize },
   });
-  return res.data; // array of track objects
+  return res.data || []; // raw pool of matching tracks — caller decides selection mode
 }
 
 async function createPlaylist({ token, title, trackIds, isPublic = false }) {

@@ -143,6 +143,43 @@ button.secondary {
 
 .hidden { display: none; }
 
+.how-it-works {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 85, 0, 0.08);
+  border: 1px solid rgba(255, 85, 0, 0.25);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.how-it-works strong {
+  color: var(--text);
+}
+
+.loading {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 input[type="text"] {
   flex: 1;
   padding: 12px 14px;
@@ -193,7 +230,54 @@ input[type="text"] {
 .playlist-actions {
   margin-top: 28px;
   display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.playlist-actions .input-row-inline {
+  display: flex;
   gap: 10px;
+}
+
+.mode-picker {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.mode-label {
+  font-weight: 600;
+  margin: 0 0 10px;
+  font-size: 0.92rem;
+}
+
+.mode-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mode-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: border-color 0.15s;
+}
+
+.mode-option:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(255, 85, 0, 0.1);
+}
+
+.mode-option input {
+  accent-color: var(--accent);
 }
 
 .result {
