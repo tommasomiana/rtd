@@ -85,7 +85,7 @@ async function scrapeRAEvent(eventUrl) {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     ...(executablePath ? { executablePath } : {}),
   });
 
@@ -114,7 +114,22 @@ async function scrapeRAEvent(eventUrl) {
       return fromDom;
     }
 
-    return extractFromNextData($) || fromDom;
+    const fromNextData = extractFromNextData($);
+    if (fromNextData.artists.length > 0) {
+      return fromNextData;
+    }
+
+    // Nothing found by either strategy — log what the page actually looked
+    // like so this can be diagnosed from the server logs (e.g. a Cloudflare
+    // challenge page vs. genuinely changed RA markup vs. a redirect).
+    const pageTitle = await page.title();
+    const bodyText = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 500);
+    console.error('RA scrape returned no artists. Diagnostics:');
+    console.error('  Page title:', pageTitle);
+    console.error('  Body text snippet:', bodyText);
+    console.error('  Final page URL:', page.url());
+
+    return fromDom;
   } finally {
     await browser.close();
   }
