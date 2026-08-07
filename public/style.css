@@ -141,8 +141,6 @@ button.secondary {
   color: var(--text);
 }
 
-.hidden { display: none; }
-
 .how-it-works {
   margin-top: 14px;
   padding: 12px 14px;
@@ -290,4 +288,10 @@ input[type="text"] {
 
 .result a {
   color: var(--accent);
+}
+
+/* Always last: must win over any other single-class display rule
+   (e.g. .loading { display: flex }) regardless of source order above. */
+.hidden {
+  display: none !important;
 }

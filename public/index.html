@@ -29,12 +29,38 @@
       <p class="hint">💡 Works best with a clear, cropped screenshot of just the lineup text.</p>
     </section>
 
+    <div class="mode-picker">
+      <p class="mode-label">🎛️ How should we pick each artist's tracks?</p>
+      <div class="mode-options">
+        <label class="mode-option">
+          <input type="radio" name="mode" value="hottest" />
+          <span>🔥 Most played</span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="mode" value="random" />
+          <span>🎲 Random</span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="mode" value="hidden" />
+          <span>💎 Hidden gems</span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="mode" value="fresh" />
+          <span>🆕 Freshest</span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="mode" value="mixed" />
+          <span>🎯 Mixed bag</span>
+        </label>
+      </div>
+    </div>
+
     <section class="input-row">
-      <button id="find-btn">🔎 Find artists on SoundCloud</button>
+      <button id="find-btn" disabled>🔎 Find artists on SoundCloud</button>
     </section>
 
     <section class="how-it-works">
-      <p>🔥 For each artist, we pull their SoundCloud tracks — you'll get to choose <strong>how</strong> we pick which ones make the playlist (most-played, random, hidden gems, and more) right before creating it.</p>
+      <p>🔥 For each artist, we pull their SoundCloud tracks — the mode you picked above decides <strong>which</strong> ones make the playlist.</p>
     </section>
 
     <section id="loading" class="loading hidden">
@@ -45,31 +71,6 @@
     <section id="lineup" class="lineup hidden"></section>
 
     <section id="playlist-actions" class="playlist-actions hidden">
-      <div class="mode-picker">
-        <p class="mode-label">🎛️ How should we pick each artist's tracks?</p>
-        <div class="mode-options">
-          <label class="mode-option">
-            <input type="radio" name="mode" value="hottest" checked />
-            <span>🔥 Most played</span>
-          </label>
-          <label class="mode-option">
-            <input type="radio" name="mode" value="random" />
-            <span>🎲 Random</span>
-          </label>
-          <label class="mode-option">
-            <input type="radio" name="mode" value="hidden" />
-            <span>💎 Hidden gems</span>
-          </label>
-          <label class="mode-option">
-            <input type="radio" name="mode" value="fresh" />
-            <span>🆕 Freshest</span>
-          </label>
-          <label class="mode-option">
-            <input type="radio" name="mode" value="mixed" />
-            <span>🎯 Mixed bag</span>
-          </label>
-        </div>
-      </div>
       <input id="playlist-title" type="text" placeholder="Playlist name" />
       <button id="create-playlist-btn">🎶 Create SoundCloud playlist</button>
     </section>

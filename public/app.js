@@ -35,6 +35,12 @@ async function refreshAuthStatus() {
 tabPaste.onclick = () => switchTab('paste');
 tabImage.onclick = () => switchTab('image');
 
+document.querySelectorAll('input[name="mode"]').forEach((radio) => {
+  radio.addEventListener('change', () => {
+    findBtn.disabled = false;
+  });
+});
+
 function switchTab(which) {
   const isPaste = which === 'paste';
   tabPaste.classList.toggle('active', isPaste);
