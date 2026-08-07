@@ -110,22 +110,21 @@ async function searchArtistTracks(artistName, token, limit = 5) {
 }
 
 async function createPlaylist({ token, title, trackIds, isPublic = false }) {
-  const res = await axios.post(
-    `${API_BASE}/playlists`,
-    {
-      playlist: {
-        title,
-        sharing: isPublic ? 'public' : 'private',
-        tracks: trackIds.map((id) => ({ id })),
-      },
+  const payload = JSON.stringify({
+    playlist: {
+      title,
+      sharing: isPublic ? 'public' : 'private',
+      tracks: trackIds.map((id) => ({ id: String(id) })),
     },
-    {
-      headers: {
-        Authorization: `OAuth ${token}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
+  });
+
+  const res = await axios.post(`${API_BASE}/playlists`, payload, {
+    headers: {
+      Authorization: `OAuth ${token}`,
+      Accept: 'application/json; charset=utf-8',
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+  });
   return res.data;
 }
 
