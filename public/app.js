@@ -195,12 +195,6 @@ findBtn.onclick = async () => {
   }
 };
 
-function formatPlayCount(n) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return `${n}`;
-}
-
 function renderLineup(artists, matches) {
   lineupEl.innerHTML = '';
   artists.forEach((artist) => {
@@ -214,8 +208,7 @@ function renderLineup(artists, matches) {
     if (!hasMatch) {
       matchLabel = '❌ no match';
     } else {
-      const mostPlayed = [...tracks].sort((a, b) => b.playback_count - a.playback_count)[0];
-      matchLabel = `🔥 ${tracks.length} tracks found · top one has ${formatPlayCount(mostPlayed.playback_count)} plays`;
+      matchLabel = '✅ match found';
     }
 
     const checkboxId = `include-${artist.replace(/\W+/g, '-')}`;
@@ -298,7 +291,7 @@ createPlaylistBtn.onclick = async () => {
   }
 
   const mode = getSelectedMode();
-  const countPerArtist = parseInt(tracksPerArtistEl.value, 10);
+  const countPerArtist = Math.min(15, Math.max(1, parseInt(tracksPerArtistEl.value, 10) || 5));
 
   const trackIds = Object.entries(currentMatches)
     .filter(([artist]) => !excludedArtists.has(artist))

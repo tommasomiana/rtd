@@ -84,6 +84,7 @@ router.post('/extract-image', upload.single('image'), async (req, res) => {
     console.log(
       `OCR on "${req.file.originalname}": extracted ${rawText.length} chars, parsed ${artists.length} artist candidates`
     );
+    console.log('OCR raw text snippet:\n' + rawText.slice(0, 1000));
     res.json({ rawText, artists });
   } catch (err) {
     console.error('OCR failed:', err.message);
