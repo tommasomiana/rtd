@@ -38,6 +38,12 @@ const NOISE_LINE_PATTERNS = [
   /\d{1,2}(st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i,
   /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}\b/i,
   /\d{1,2}\s*(am|pm)\b/i,
+  // Instagram/social-post chrome that sometimes gets OCR'd along with a
+  // screenshotted lineup graphic
+  /^\d+\s*posts?$/i,
+  /liked by/i,
+  /see translation/i,
+  /\d+\s*(days?|hours?|weeks?)\s*ago/i,
 ];
 
 // Noise words/labels that sometimes appear attached directly to an artist
@@ -45,14 +51,33 @@ const NOISE_LINE_PATTERNS = [
 // stripped from the end of a token rather than only matched as a whole token.
 const TRAILING_NOISE_SUFFIX = /\s*\b(live|b2b|dj set|presents)\b\s*$/i;
 
+// A schedule-grid style poster (e.g. an Instagram post with a timetable)
+// mixes times in with names — these patterns catch that noise at the
+// token level, after splitting, since times often end up on their own
+// line/segment rather than a whole noise line.
+function looksLikeTimeOrJunk(token) {
+  if (/^\d{1,2}:\d{2}/.test(token)) return true; // "16:00", "17:00-18:00"
+  if (/^\d+([-–]\d+)?$/.test(token)) return true; // bare numbers/ranges
+  const digitCount = (token.match(/\d/g) || []).length;
+  // Mostly-digits tokens are almost always OCR noise (times, IDs) rather
+  // than an artist name — except the rare fully-numeric stage name, which
+  // tends to be long (e.g. "999999999"), so that's exempted.
+  if (digitCount / token.length > 0.4 && !/^\d+$/.test(token)) return true;
+  return false;
+}
+
 // Splits raw free-form text (pasted or OCR'd) into a clean artist list.
 // Handles one-per-line, comma-separated, and bullet-separated input (lineup
 // posters commonly use "·", "•", or "|" between names on the same line),
-// plus common noise (date/venue header lines, b2b/live/DJ-set labels).
+// plus common noise (date/venue header lines, b2b/live/DJ-set labels, and
+// schedule-grid/social-media chrome for messier screenshot sources).
 function parseArtistsFromText(rawText) {
   if (!rawText) return [];
 
-  const noiseWords = new Set(['b2b', 'live', 'dj set', 'dj', 'presents', 'w/']);
+  const noiseWords = new Set([
+    'b2b', 'live', 'dj set', 'dj', 'presents', 'w/',
+    'posts', 'more', 'ago', 'others', 'and others',
+  ]);
 
   const lines = rawText
     .split('\n')
@@ -66,6 +91,7 @@ function parseArtistsFromText(rawText) {
     .filter(Boolean)
     .filter((token) => !noiseWords.has(token.toLowerCase()))
     .filter((token) => token.length >= 2 && token.length <= 60)
+    .filter((token) => !looksLikeTimeOrJunk(token))
     // de-dupe, case-insensitive, keep first-seen casing
     .filter((token, idx, arr) => arr.findIndex((t) => t.toLowerCase() === token.toLowerCase()) === idx);
 }
@@ -117,6 +143,7 @@ router.post('/match', async (req, res) => {
           user: t.user?.username,
           playback_count: t.playback_count || 0,
           created_at: t.created_at || null,
+          duration: t.duration || 0, // milliseconds
         }));
       } catch (err) {
         console.error(`Search failed for "${artist}":`, err.response?.data || err.message);

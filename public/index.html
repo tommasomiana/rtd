@@ -26,6 +26,7 @@
 
     <section id="paste-panel" class="panel">
       <textarea id="lineup-text" rows="6" placeholder="One artist per line, or comma-separated&#10;e.g.&#10;Acid Arab&#10;Âme b2b Trikk&#10;Floating Points"></textarea>
+      <p id="paste-message" class="section-message hidden"></p>
     </section>
 
     <section id="image-panel" class="panel hidden">
@@ -84,6 +85,10 @@
         <label class="tracks-per-artist">
           <span>🎵 Tracks per artist:</span>
           <input id="tracks-per-artist" type="number" min="1" max="15" value="5" />
+        </label>
+        <label class="dj-sets-toggle">
+          <input type="checkbox" id="include-dj-sets" />
+          <span>🎚️ Include DJ sets / long mixes (usually 15+ min uploads)</span>
         </label>
         <p class="hint">☑️ Uncheck any artist above you'd rather leave out of the playlist.</p>
       </div>

@@ -11,6 +11,7 @@ const lineupTextEl = document.getElementById('lineup-text');
 const lineupImageEl = document.getElementById('lineup-image');
 const extractBtn = document.getElementById('extract-btn');
 const imageMessageEl = document.getElementById('image-message');
+const pasteMessageEl = document.getElementById('paste-message');
 
 const findBtn = document.getElementById('find-btn');
 const findRequirementsEl = document.getElementById('find-requirements');
@@ -22,6 +23,7 @@ const loadingTextEl = document.getElementById('loading-text');
 const lineupEl = document.getElementById('lineup');
 const playlistActionsEl = document.getElementById('playlist-actions');
 const tracksPerArtistEl = document.getElementById('tracks-per-artist');
+const includeDjSetsEl = document.getElementById('include-dj-sets');
 const playlistTitleInput = document.getElementById('playlist-title');
 const createPlaylistBtn = document.getElementById('create-playlist-btn');
 const playlistMessageEl = document.getElementById('playlist-message');
@@ -112,6 +114,7 @@ extractBtn.onclick = async () => {
   setLoading(extractBtn, true, '🔍 Reading...');
   showLoading('🔍 Reading text from the image...');
   hideMessage(imageMessageEl);
+  hideMessage(pasteMessageEl);
 
   try {
     const formData = new FormData();
@@ -125,16 +128,16 @@ extractBtn.onclick = async () => {
       lineupTextEl.value = data.artists.join('\n');
       switchTab('paste');
       showMessage(
-        imageMessageEl,
-        `✨ Found ${data.artists.length} artist name${data.artists.length === 1 ? '' : 's'} in the image — they've been added to the "Paste text" box. Review them there before continuing.`,
+        pasteMessageEl,
+        `✨ Found ${data.artists.length} possible artist name${data.artists.length === 1 ? '' : 's'} in the image — double-check the list below before continuing (OCR isn't perfect, especially on busy or grid-style posters).`,
         'success'
       );
     } else if (data.rawText.trim()) {
       lineupTextEl.value = data.rawText.trim();
       switchTab('paste');
       showMessage(
-        imageMessageEl,
-        `🤔 Couldn't confidently pick out artist names, but the raw text found in the image has been put in the "Paste text" box — clean it up there before continuing.`,
+        pasteMessageEl,
+        `🤔 Couldn't confidently pick out artist names, so here's the raw text found in the image instead — clean it up below before continuing.`,
         'error'
       );
     } else {
@@ -240,14 +243,23 @@ function renderLineup(artists, matches) {
 
 // --- Track selection modes ----------------------------------------------
 
-// Given an artist's full pool of matched tracks, picks `count` of them
-// according to the chosen mode.
-function pickTracks(tracks, mode, count) {
-  if (tracks.length === 0) return [];
+// Tracks longer than this are almost always a DJ set/mix rather than a
+// single track — real singles rarely run past this even in house/techno.
+const DJ_SET_THRESHOLD_MS = 15 * 60 * 1000;
 
-  const byPlaysDesc = [...tracks].sort((a, b) => b.playback_count - a.playback_count);
-  const byPlaysAsc = [...tracks].sort((a, b) => a.playback_count - b.playback_count);
-  const byNewest = [...tracks].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+// Given an artist's full pool of matched tracks, picks `count` of them
+// according to the chosen mode. `includeDjSets` controls whether long
+// mixes/sets are eligible at all before the mode's own logic runs.
+function pickTracks(tracks, mode, count, includeDjSets) {
+  const eligible = includeDjSets
+    ? tracks
+    : tracks.filter((t) => t.duration < DJ_SET_THRESHOLD_MS);
+
+  if (eligible.length === 0) return [];
+
+  const byPlaysDesc = [...eligible].sort((a, b) => b.playback_count - a.playback_count);
+  const byPlaysAsc = [...eligible].sort((a, b) => a.playback_count - b.playback_count);
+  const byNewest = [...eligible].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   function shuffled(arr) {
     const copy = [...arr];
@@ -266,12 +278,12 @@ function pickTracks(tracks, mode, count) {
     case 'fresh':
       return byNewest.slice(0, count);
     case 'random':
-      return shuffled(tracks).slice(0, count);
+      return shuffled(eligible).slice(0, count);
     case 'mixed': {
       const topCount = Math.ceil(count / 2);
       const top = byPlaysDesc.slice(0, topCount);
       const topIds = new Set(top.map((t) => t.id));
-      const rest = shuffled(tracks.filter((t) => !topIds.has(t.id)));
+      const rest = shuffled(eligible.filter((t) => !topIds.has(t.id)));
       return [...top, ...rest.slice(0, count - top.length)];
     }
     default:
@@ -292,14 +304,19 @@ createPlaylistBtn.onclick = async () => {
 
   const mode = getSelectedMode();
   const countPerArtist = Math.min(15, Math.max(1, parseInt(tracksPerArtistEl.value, 10) || 5));
+  const includeDjSets = includeDjSetsEl.checked;
 
   const trackIds = Object.entries(currentMatches)
     .filter(([artist]) => !excludedArtists.has(artist))
-    .flatMap(([, tracks]) => pickTracks(tracks, mode, countPerArtist))
+    .flatMap(([, tracks]) => pickTracks(tracks, mode, countPerArtist, includeDjSets))
     .map((t) => t.id);
 
   if (trackIds.length === 0) {
-    showMessage(playlistMessageEl, '😕 No tracks selected — check at least one artist above.', 'error');
+    showMessage(
+      playlistMessageEl,
+      '😕 No tracks selected — check at least one artist above, or try enabling "Include DJ sets / long mixes" if their matches were mostly long uploads.',
+      'error'
+    );
     return;
   }
 

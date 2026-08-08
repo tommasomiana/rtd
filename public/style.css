@@ -333,6 +333,21 @@ input[type="text"] {
   margin-bottom: 0;
 }
 
+.dj-sets-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.dj-sets-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
 .playlist-actions {
   margin-top: 28px;
   display: flex;
