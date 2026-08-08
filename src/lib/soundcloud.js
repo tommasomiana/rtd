@@ -120,16 +120,28 @@ async function findArtistUser(artistName, token) {
     params: { q: artistName, limit: 10 },
   });
 
-  const users = res.data || [];
+  const data = res.data;
+  const users = Array.isArray(data) ? data : Array.isArray(data?.collection) ? data.collection : [];
+
+  console.log(
+    `[artist-match] "${artistName}" candidates:`,
+    users.map((u) => `${u.username} (id=${u.id}, followers=${u.followers_count || 0})`)
+  );
+
   if (users.length === 0) return null;
 
   const normalizedQuery = normalizeForCompare(artistName);
   const exactMatch = users.find(
     (u) => u.username && normalizeForCompare(u.username) === normalizedQuery
   );
-  if (exactMatch) return exactMatch;
+  if (exactMatch) {
+    console.log(`[artist-match] "${artistName}" -> exact match: ${exactMatch.username}`);
+    return exactMatch;
+  }
 
-  return [...users].sort((a, b) => (b.followers_count || 0) - (a.followers_count || 0))[0];
+  const byFollowers = [...users].sort((a, b) => (b.followers_count || 0) - (a.followers_count || 0))[0];
+  console.log(`[artist-match] "${artistName}" -> no exact match, picked by followers: ${byFollowers.username}`);
+  return byFollowers;
 }
 
 async function getUserTracks(userId, token, limit) {
@@ -137,7 +149,10 @@ async function getUserTracks(userId, token, limit) {
     headers: { Authorization: `OAuth ${token}` },
     params: { limit },
   });
-  return res.data || [];
+  const data = res.data;
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.collection)) return data.collection;
+  return [];
 }
 
 // Gets a pool of tracks that genuinely belong to an artist, rather than
