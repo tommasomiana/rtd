@@ -180,18 +180,25 @@ async function searchArtistTracks(artistName, token, poolSize = 15) {
   }
 
   // Fallback: no clear profile match, or that profile has no public
-  // tracks. Use keyword search, but filter out results that only mention
-  // the artist's name in the title rather than actually being uploaded
-  // by them — this is the check that was missing before.
+  // tracks via the direct endpoint — common for label-distributed artists
+  // (Anjunadeep, Young Turks, etc.), whose catalog often isn't exposed
+  // through users/{id}/tracks even though it's publicly playable.
+  // Use keyword search, filtered to require the artist's name actually
+  // appear in the uploader's username (diacritic-insensitive) — otherwise
+  // this would match any track that merely mentions the artist in its title.
   const res = await axios.get(`${API_BASE}/tracks`, {
     headers: { Authorization: `OAuth ${token}` },
-    params: { q: artistName, limit: poolSize * 2 },
+    params: { q: artistName, limit: poolSize * 4 },
   });
   const allTracks = res.data || [];
-  const needle = artistName.toLowerCase();
+  const needle = normalizeForCompare(artistName);
   const tracks = allTracks
-    .filter((t) => t.user?.username && t.user.username.toLowerCase().includes(needle))
+    .filter((t) => t.user?.username && normalizeForCompare(t.user.username).includes(needle))
     .slice(0, poolSize);
+
+  console.log(
+    `[artist-match] "${artistName}" fallback keyword search: ${allTracks.length} raw results, ${tracks.length} kept after uploader-name filter`
+  );
 
   return { matchedUser: user || null, tracks };
 }
