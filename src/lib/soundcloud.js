@@ -117,7 +117,7 @@ function normalizeForCompare(str) {
 async function findArtistUser(artistName, token) {
   const res = await axios.get(`${API_BASE}/users`, {
     headers: { Authorization: `OAuth ${token}` },
-    params: { q: artistName, limit: 10 },
+    params: { q: artistName, limit: 20 },
   });
 
   const data = res.data;
@@ -131,12 +131,15 @@ async function findArtistUser(artistName, token) {
   if (users.length === 0) return null;
 
   const normalizedQuery = normalizeForCompare(artistName);
-  const exactMatch = users.find(
+  const exactMatches = users.filter(
     (u) => u.username && normalizeForCompare(u.username) === normalizedQuery
   );
-  if (exactMatch) {
-    console.log(`[artist-match] "${artistName}" -> exact match: ${exactMatch.username}`);
-    return exactMatch;
+  if (exactMatches.length > 0) {
+    const best = [...exactMatches].sort((a, b) => (b.followers_count || 0) - (a.followers_count || 0))[0];
+    console.log(
+      `[artist-match] "${artistName}" -> ${exactMatches.length} exact match(es), picked by followers: ${best.username} (${best.followers_count || 0} followers)`
+    );
+    return best;
   }
 
   const byFollowers = [...users].sort((a, b) => (b.followers_count || 0) - (a.followers_count || 0))[0];
