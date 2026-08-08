@@ -101,12 +101,60 @@ async function refreshToken(refresh_token) {
 
 // --- API calls ----------------------------------------------------------
 
+// Finds the SoundCloud user profile that best matches an artist name.
+// Prefers an exact (case-insensitive) username match; falls back to the
+// top search result, since SoundCloud's own relevance ranking is usually
+// reasonable when there's no exact match (e.g. slightly different casing
+// or spacing in how the artist's name was typed vs. their SC username).
+async function findArtistUser(artistName, token) {
+  const res = await axios.get(`${API_BASE}/users`, {
+    headers: { Authorization: `OAuth ${token}` },
+    params: { q: artistName, limit: 5 },
+  });
+
+  const users = res.data || [];
+  if (users.length === 0) return null;
+
+  const exactMatch = users.find(
+    (u) => u.username && u.username.toLowerCase() === artistName.toLowerCase()
+  );
+  return exactMatch || users[0];
+}
+
+async function getUserTracks(userId, token, limit) {
+  const res = await axios.get(`${API_BASE}/users/${userId}/tracks`, {
+    headers: { Authorization: `OAuth ${token}` },
+    params: { limit },
+  });
+  return res.data || [];
+}
+
+// Gets a pool of tracks that genuinely belong to an artist, rather than
+// just any track whose title/description happens to mention their name.
+// Looks up their actual SoundCloud profile first and pulls from their own
+// uploads; only falls back to a keyword search (filtered to require the
+// artist's name in the uploader's username) if no matching profile exists.
 async function searchArtistTracks(artistName, token, poolSize = 15) {
+  const user = await findArtistUser(artistName, token);
+
+  if (user) {
+    const tracks = await getUserTracks(user.id, token, poolSize);
+    if (tracks.length > 0) return tracks;
+  }
+
+  // Fallback: no clear profile match, or that profile has no public
+  // tracks. Use keyword search, but filter out results that only mention
+  // the artist's name in the title rather than actually being uploaded
+  // by them — this is the check that was missing before.
   const res = await axios.get(`${API_BASE}/tracks`, {
     headers: { Authorization: `OAuth ${token}` },
-    params: { q: artistName, limit: poolSize },
+    params: { q: artistName, limit: poolSize * 2 },
   });
-  return res.data || []; // raw pool of matching tracks — caller decides selection mode
+  const tracks = res.data || [];
+  const needle = artistName.toLowerCase();
+  return tracks
+    .filter((t) => t.user?.username && t.user.username.toLowerCase().includes(needle))
+    .slice(0, poolSize);
 }
 
 async function createPlaylist({ token, title, trackIds, isPublic = false }) {

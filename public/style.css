@@ -70,6 +70,19 @@ header h1 {
   color: transparent;
 }
 
+header .subtitle {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-dim);
+  margin-left: 8px;
+  vertical-align: middle;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  background: none;
+}
+
 .tagline {
   font-family: var(--font-display);
   color: var(--text-dim);
