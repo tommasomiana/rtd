@@ -41,8 +41,8 @@ async function refreshAuthStatus() {
 
   if (isLoggedIn) {
     authBannerEl.classList.add('connected');
-    authIconEl.textContent = '✅';
-    authTextEl.textContent = 'Connected to SoundCloud — you can create playlists on your account.';
+    authIconEl.textContent = '●';
+    authTextEl.textContent = 'Connected';
     authActionEl.textContent = 'Disconnect';
     authActionEl.href = '#';
     authActionEl.onclick = async (e) => {
@@ -52,9 +52,9 @@ async function refreshAuthStatus() {
     };
   } else {
     authBannerEl.classList.remove('connected');
-    authIconEl.textContent = '🔗';
-    authTextEl.textContent = 'Step 1: connect your SoundCloud account to get started.';
-    authActionEl.textContent = 'Connect with SoundCloud';
+    authIconEl.textContent = '●';
+    authTextEl.textContent = 'Connect SoundCloud';
+    authActionEl.textContent = 'Connect';
     authActionEl.href = '/auth/login';
     authActionEl.onclick = null;
   }
@@ -78,7 +78,7 @@ function updateFindButtonState() {
   findBtn.disabled = missing.length > 0;
 
   if (missing.length > 0) {
-    findRequirementsEl.textContent = `👆 First, ${missing.join(' and ')}.`;
+    findRequirementsEl.textContent = `Connect SoundCloud and pick a vibe to continue.`;
     findRequirementsEl.classList.remove('hidden');
   } else {
     findRequirementsEl.classList.add('hidden');
@@ -107,12 +107,12 @@ function switchTab(which) {
 extractBtn.onclick = async () => {
   const file = lineupImageEl.files[0];
   if (!file) {
-    showMessage(imageMessageEl, '📸 Choose an image first.', 'error');
+    showMessage(imageMessageEl, 'Choose an image first.', 'error');
     return;
   }
 
-  setLoading(extractBtn, true, '🔍 Reading...');
-  showLoading('🔍 Reading text from the image...');
+  setLoading(extractBtn, true, 'Reading...');
+  showLoading('Reading text from the image...');
   hideMessage(imageMessageEl);
   hideMessage(pasteMessageEl);
 
@@ -129,7 +129,7 @@ extractBtn.onclick = async () => {
       switchTab('paste');
       showMessage(
         pasteMessageEl,
-        `✨ Found ${data.artists.length} possible artist name${data.artists.length === 1 ? '' : 's'} in the image — double-check the list below before continuing (OCR isn't perfect, especially on busy or grid-style posters).`,
+        `Found ${data.artists.length} possible artist name${data.artists.length === 1 ? '' : 's'} — double-check the list below (OCR isn't perfect on busy posters).`,
         'success'
       );
     } else if (data.rawText.trim()) {
@@ -137,21 +137,21 @@ extractBtn.onclick = async () => {
       switchTab('paste');
       showMessage(
         pasteMessageEl,
-        `🤔 Couldn't confidently pick out artist names, so here's the raw text found in the image instead — clean it up below before continuing.`,
+        `Couldn't isolate artist names — here's the raw text instead. Clean it up below.`,
         'error'
       );
     } else {
       showMessage(
         imageMessageEl,
-        `😕 No readable text found in that image at all — try a clearer or more cropped screenshot, or paste the lineup as text instead.`,
+        `No readable text found in that image — try a clearer screenshot, or paste the lineup as text.`,
         'error'
       );
     }
   } catch (err) {
-    showMessage(imageMessageEl, `⚠️ ${err.message}`, 'error');
+    showMessage(imageMessageEl, err.message, 'error');
   } finally {
     hideLoading();
-    setLoading(extractBtn, false, '🔍 Extract text from image');
+    setLoading(extractBtn, false, 'Extract text');
   }
 };
 
@@ -166,12 +166,12 @@ findBtn.onclick = async () => {
   hideMessage(matchMessageEl);
 
   if (artists.length === 0) {
-    showMessage(matchMessageEl, '✍️ Add at least one artist name first.', 'error');
+    showMessage(matchMessageEl, 'Add at least one artist first.', 'error');
     return;
   }
 
-  setLoading(findBtn, true, '🔎 Matching...');
-  showLoading('🎧 Searching SoundCloud for each artist...');
+  setLoading(findBtn, true, 'Matching...');
+  showLoading('Searching SoundCloud...');
   lineupEl.classList.add('hidden');
   playlistActionsEl.classList.add('hidden');
 
@@ -191,10 +191,10 @@ findBtn.onclick = async () => {
     playlistTitleInput.value = 'RTD Playlist';
     playlistActionsEl.classList.remove('hidden');
   } catch (err) {
-    showMessage(matchMessageEl, `⚠️ ${err.message}`, 'error');
+    showMessage(matchMessageEl, err.message, 'error');
   } finally {
     hideLoading();
-    setLoading(findBtn, false, '🔎 Find artists on SoundCloud');
+    setLoading(findBtn, false, 'Find artists');
   }
 };
 
@@ -207,19 +207,12 @@ function renderLineup(artists, matches) {
     const card = document.createElement('div');
     card.className = 'artist-card' + (hasMatch ? '' : ' no-match');
 
-    let matchLabel;
-    if (!hasMatch) {
-      matchLabel = '❌ no match';
-    } else {
-      matchLabel = '✅ match found';
-    }
-
     const checkboxId = `include-${artist.replace(/\W+/g, '-')}`;
     card.innerHTML = `
       <input type="checkbox" id="${checkboxId}" ${hasMatch ? 'checked' : 'disabled'} />
       <label class="info" for="${checkboxId}">
-        <span class="name">🎤 ${artist}</span>
-        <span class="match">${matchLabel}</span>
+        <span class="name">${artist}</span>
+        <span class="match"><span class="status-dot"></span>${hasMatch ? 'matched' : 'no match'}</span>
       </label>
     `;
 
@@ -298,7 +291,7 @@ createPlaylistBtn.onclick = async () => {
   hideMessage(playlistMessageEl);
 
   if (!title) {
-    showMessage(playlistMessageEl, '✍️ Give the playlist a name first.', 'error');
+    showMessage(playlistMessageEl, 'Give the playlist a name first.', 'error');
     return;
   }
 
@@ -314,14 +307,14 @@ createPlaylistBtn.onclick = async () => {
   if (trackIds.length === 0) {
     showMessage(
       playlistMessageEl,
-      '😕 No tracks selected — check at least one artist above, or try enabling "Include DJ sets / long mixes" if their matches were mostly long uploads.',
+      'No tracks selected — check at least one artist, or enable "Include DJ sets / long mixes" above.',
       'error'
     );
     return;
   }
 
-  setLoading(createPlaylistBtn, true, '🎶 Creating...');
-  showLoading('🎶 Creating your playlist on SoundCloud...');
+  setLoading(createPlaylistBtn, true, 'Creating...');
+  showLoading('Creating your playlist...');
   try {
     const res = await fetch('/api/playlist', {
       method: 'POST',
@@ -333,14 +326,14 @@ createPlaylistBtn.onclick = async () => {
 
     showMessage(
       playlistMessageEl,
-      `🎉 Playlist created! <a href="${data.playlist_url}" target="_blank">${data.playlist_url}</a>`,
+      `Playlist created — <a href="${data.playlist_url}" target="_blank">open on SoundCloud</a>`,
       'success'
     );
   } catch (err) {
-    showMessage(playlistMessageEl, `⚠️ ${err.message}`, 'error');
+    showMessage(playlistMessageEl, err.message, 'error');
   } finally {
     hideLoading();
-    setLoading(createPlaylistBtn, false, '🎶 Create SoundCloud playlist');
+    setLoading(createPlaylistBtn, false, 'Create playlist');
   }
 };
 

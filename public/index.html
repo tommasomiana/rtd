@@ -4,97 +4,114 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RTD — Ready to Dance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="glow"></div>
   <div class="wrap">
     <header>
-      <h1>RtD <span class="subtitle">Ready to Dance</span></h1>
-      <p class="tagline">✂️ Paste a lineup, or 📸 upload a screenshot of one. Get a 🎧 SoundCloud playlist.</p>
+      <div class="wordmark">
+        <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <h1>RTD</h1>
+      </div>
+      <p class="tagline">lineup <span class="arrow">→</span> playlist</p>
     </header>
 
-    <section id="auth-banner" class="auth-banner">
-      <span id="auth-icon">🔗</span>
-      <span id="auth-text">Step 1: connect your SoundCloud account to get started.</span>
-      <a id="auth-action" href="/auth/login" class="auth-button">Connect with SoundCloud</a>
+    <section class="step">
+      <span class="step-num">1</span>
+      <section id="auth-banner" class="auth-banner">
+        <span id="auth-icon">●</span>
+        <span id="auth-text">Connect SoundCloud</span>
+        <a id="auth-action" href="/auth/login" class="auth-button">Connect</a>
+      </section>
     </section>
 
-    <section class="input-tabs">
-      <button id="tab-paste" class="tab active">✍️ Paste text</button>
-      <button id="tab-image" class="tab">📸 Upload screenshot</button>
-    </section>
+    <section class="step">
+      <span class="step-num">2</span>
+      <div class="step-body">
+        <section class="input-tabs">
+          <button id="tab-paste" class="tab active">Paste</button>
+          <button id="tab-image" class="tab">Screenshot</button>
+        </section>
 
-    <section id="paste-panel" class="panel">
-      <textarea id="lineup-text" rows="6" placeholder="One artist per line, or comma-separated&#10;e.g.&#10;Acid Arab&#10;Âme b2b Trikk&#10;Floating Points"></textarea>
-      <p id="paste-message" class="section-message hidden"></p>
-    </section>
+        <section id="paste-panel" class="panel">
+          <textarea id="lineup-text" rows="6" placeholder="One artist per line, or comma-separated&#10;e.g.&#10;Acid Arab&#10;Âme b2b Trikk&#10;Floating Points"></textarea>
+          <p id="paste-message" class="section-message hidden"></p>
+        </section>
 
-    <section id="image-panel" class="panel hidden">
-      <input id="lineup-image" type="file" accept="image/*" />
-      <button id="extract-btn" class="secondary">🔍 Extract text from image</button>
-      <p class="hint">💡 Works best with a clear, cropped screenshot of just the lineup text.</p>
-      <p id="image-message" class="section-message hidden"></p>
-    </section>
-
-    <section class="how-it-works">
-      <p>🔥 For each artist, we pull their SoundCloud tracks — the mode you pick <strong>below</strong> decides <strong>which</strong> ones make the playlist.</p>
-    </section>
-
-    <div class="mode-picker">
-      <p class="mode-label">🎛️ How should we pick each artist's tracks?</p>
-      <div class="mode-options">
-        <label class="mode-option">
-          <input type="radio" name="mode" value="hottest" />
-          <span>🔥 Most played</span>
-        </label>
-        <label class="mode-option">
-          <input type="radio" name="mode" value="random" />
-          <span>🎲 Random</span>
-        </label>
-        <label class="mode-option">
-          <input type="radio" name="mode" value="hidden" />
-          <span>💎 Hidden gems</span>
-        </label>
-        <label class="mode-option">
-          <input type="radio" name="mode" value="fresh" />
-          <span>🆕 Freshest</span>
-        </label>
-        <label class="mode-option">
-          <input type="radio" name="mode" value="mixed" />
-          <span>🎯 Mixed bag</span>
-        </label>
+        <section id="image-panel" class="panel hidden">
+          <input id="lineup-image" type="file" accept="image/*" />
+          <button id="extract-btn" class="secondary">Extract text</button>
+          <p class="hint">Works best on a clear, cropped screenshot.</p>
+          <p id="image-message" class="section-message hidden"></p>
+        </section>
       </div>
-    </div>
-
-    <section class="input-row">
-      <button id="find-btn" disabled>🔎 Find artists on SoundCloud</button>
-      <p id="find-requirements" class="section-message hint-message"></p>
     </section>
 
-    <section id="loading" class="loading hidden">
-      <div class="spinner"></div>
-      <span id="loading-text">Loading...</span>
-    </section>
+    <section class="step">
+      <span class="step-num">3</span>
+      <div class="step-body">
+        <div class="mode-picker">
+          <div class="mode-options">
+            <label class="mode-option">
+              <input type="radio" name="mode" value="hottest" />
+              <span>🔥 Most played</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="mode" value="random" />
+              <span>🎲 Random</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="mode" value="hidden" />
+              <span>💎 Hidden gems</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="mode" value="fresh" />
+              <span>🆕 Freshest</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="mode" value="mixed" />
+              <span>🎯 Mixed bag</span>
+            </label>
+          </div>
+        </div>
 
-    <p id="match-message" class="section-message hidden"></p>
+        <button id="find-btn" disabled>Find artists</button>
+        <p id="find-requirements" class="section-message hint-message"></p>
 
-    <section id="lineup" class="lineup hidden"></section>
+        <section id="loading" class="loading hidden">
+          <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span id="loading-text">Loading...</span>
+        </section>
 
-    <section id="playlist-actions" class="playlist-actions hidden">
-      <div class="playlist-config">
-        <label class="tracks-per-artist">
-          <span>🎵 Tracks per artist:</span>
-          <input id="tracks-per-artist" type="number" min="1" max="15" value="5" />
-        </label>
-        <label class="dj-sets-toggle">
-          <input type="checkbox" id="include-dj-sets" />
-          <span>🎚️ Include DJ sets / long mixes (usually 15+ min uploads)</span>
-        </label>
-        <p class="hint">☑️ Uncheck any artist above you'd rather leave out of the playlist.</p>
+        <p id="match-message" class="section-message hidden"></p>
+
+        <section id="lineup" class="lineup hidden"></section>
       </div>
-      <input id="playlist-title" type="text" placeholder="Playlist name" />
-      <button id="create-playlist-btn">🎶 Create SoundCloud playlist</button>
-      <p id="playlist-message" class="section-message hidden"></p>
+    </section>
+
+    <section id="playlist-actions" class="step hidden">
+      <span class="step-num">4</span>
+      <div class="step-body">
+        <div class="playlist-config">
+          <label class="tracks-per-artist">
+            <span>Tracks per artist</span>
+            <input id="tracks-per-artist" type="number" min="1" max="15" value="5" />
+          </label>
+          <label class="dj-sets-toggle">
+            <input type="checkbox" id="include-dj-sets" />
+            <span>Include DJ sets / long mixes</span>
+          </label>
+        </div>
+        <div class="playlist-create">
+          <input id="playlist-title" type="text" placeholder="Playlist name" />
+          <button id="create-playlist-btn">Create playlist</button>
+        </div>
+        <p id="playlist-message" class="section-message hidden"></p>
+      </div>
     </section>
   </div>
 
