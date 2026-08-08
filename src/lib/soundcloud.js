@@ -153,6 +153,10 @@ async function getUserTracks(userId, token, limit) {
     params: { limit },
   });
   const data = res.data;
+  console.log(
+    `[user-tracks] user ${userId}: type=${Array.isArray(data) ? 'array' : typeof data}, ` +
+      `${Array.isArray(data) ? `length=${data.length}` : `keys=${data && typeof data === 'object' ? Object.keys(data).join(',') : 'n/a'}`}`
+  );
   if (Array.isArray(data)) return data;
   if (data && Array.isArray(data.collection)) return data.collection;
   return [];
