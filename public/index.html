@@ -11,8 +11,13 @@
     <header>
       <h1>🕺 RTD <span class="subtitle">Ready to Dance</span></h1>
       <p class="tagline">✂️ Paste a lineup, or 📸 upload a screenshot of one. Get a 🎧 SoundCloud playlist.</p>
-      <div id="auth-status" class="auth-status"></div>
     </header>
+
+    <section id="auth-banner" class="auth-banner">
+      <span id="auth-icon">🔗</span>
+      <span id="auth-text">Step 1: connect your SoundCloud account to get started.</span>
+      <a id="auth-action" href="/auth/login" class="auth-button">Connect with SoundCloud</a>
+    </section>
 
     <section class="input-tabs">
       <button id="tab-paste" class="tab active">✍️ Paste text</button>
@@ -27,6 +32,7 @@
       <input id="lineup-image" type="file" accept="image/*" />
       <button id="extract-btn" class="secondary">🔍 Extract text from image</button>
       <p class="hint">💡 Works best with a clear, cropped screenshot of just the lineup text.</p>
+      <p id="image-message" class="section-message hidden"></p>
     </section>
 
     <div class="mode-picker">
@@ -55,12 +61,13 @@
       </div>
     </div>
 
-    <section class="input-row">
-      <button id="find-btn" disabled>🔎 Find artists on SoundCloud</button>
-    </section>
-
     <section class="how-it-works">
       <p>🔥 For each artist, we pull their SoundCloud tracks — the mode you picked above decides <strong>which</strong> ones make the playlist.</p>
+    </section>
+
+    <section class="input-row">
+      <button id="find-btn" disabled>🔎 Find artists on SoundCloud</button>
+      <p id="find-requirements" class="section-message hint-message"></p>
     </section>
 
     <section id="loading" class="loading hidden">
@@ -68,14 +75,26 @@
       <span id="loading-text">Loading...</span>
     </section>
 
+    <p id="match-message" class="section-message hidden"></p>
+
     <section id="lineup" class="lineup hidden"></section>
 
     <section id="playlist-actions" class="playlist-actions hidden">
+      <div class="playlist-config">
+        <label class="tracks-per-artist">
+          <span>🎵 Tracks per artist:</span>
+          <select id="tracks-per-artist">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+          </select>
+        </label>
+        <p class="hint">☑️ Uncheck any artist above you'd rather leave out of the playlist.</p>
+      </div>
       <input id="playlist-title" type="text" placeholder="Playlist name" />
       <button id="create-playlist-btn">🎶 Create SoundCloud playlist</button>
+      <p id="playlist-message" class="section-message hidden"></p>
     </section>
-
-    <section id="result" class="result hidden"></section>
   </div>
 
   <script src="app.js"></script>

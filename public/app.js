@@ -1,4 +1,8 @@
-const authStatusEl = document.getElementById('auth-status');
+const authBannerEl = document.getElementById('auth-banner');
+const authIconEl = document.getElementById('auth-icon');
+const authTextEl = document.getElementById('auth-text');
+const authActionEl = document.getElementById('auth-action');
+
 const tabPaste = document.getElementById('tab-paste');
 const tabImage = document.getElementById('tab-image');
 const pastePanel = document.getElementById('paste-panel');
@@ -6,40 +10,87 @@ const imagePanel = document.getElementById('image-panel');
 const lineupTextEl = document.getElementById('lineup-text');
 const lineupImageEl = document.getElementById('lineup-image');
 const extractBtn = document.getElementById('extract-btn');
+const imageMessageEl = document.getElementById('image-message');
+
 const findBtn = document.getElementById('find-btn');
-const lineupEl = document.getElementById('lineup');
+const findRequirementsEl = document.getElementById('find-requirements');
+const matchMessageEl = document.getElementById('match-message');
+
 const loadingEl = document.getElementById('loading');
 const loadingTextEl = document.getElementById('loading-text');
+
+const lineupEl = document.getElementById('lineup');
 const playlistActionsEl = document.getElementById('playlist-actions');
+const tracksPerArtistEl = document.getElementById('tracks-per-artist');
 const playlistTitleInput = document.getElementById('playlist-title');
 const createPlaylistBtn = document.getElementById('create-playlist-btn');
-const resultEl = document.getElementById('result');
+const playlistMessageEl = document.getElementById('playlist-message');
 
 let currentMatches = {}; // { artistName: [tracks] }
+let excludedArtists = new Set();
+let isLoggedIn = false;
+
+// --- Auth ------------------------------------------------------------
 
 async function refreshAuthStatus() {
   const res = await fetch('/auth/me');
-  const { loggedIn } = await res.json();
-  authStatusEl.innerHTML = loggedIn
-    ? `✅ Connected to SoundCloud · <button id="logout-btn">Disconnect</button>`
-    : `🔗 <a href="/auth/login">Connect with SoundCloud</a> to save playlists to your account`;
+  const data = await res.json();
+  isLoggedIn = data.loggedIn;
 
-  if (loggedIn) {
-    document.getElementById('logout-btn').onclick = async () => {
+  if (isLoggedIn) {
+    authBannerEl.classList.add('connected');
+    authIconEl.textContent = '✅';
+    authTextEl.textContent = 'Connected to SoundCloud — you can create playlists on your account.';
+    authActionEl.textContent = 'Disconnect';
+    authActionEl.href = '#';
+    authActionEl.onclick = async (e) => {
+      e.preventDefault();
       await fetch('/auth/logout', { method: 'POST' });
       refreshAuthStatus();
     };
+  } else {
+    authBannerEl.classList.remove('connected');
+    authIconEl.textContent = '🔗';
+    authTextEl.textContent = 'Step 1: connect your SoundCloud account to get started.';
+    authActionEl.textContent = 'Connect with SoundCloud';
+    authActionEl.href = '/auth/login';
+    authActionEl.onclick = null;
+  }
+
+  updateFindButtonState();
+}
+
+// --- Find button gating (needs login + a selected mode) --------------
+
+function getSelectedMode() {
+  const checked = document.querySelector('input[name="mode"]:checked');
+  return checked ? checked.value : null;
+}
+
+function updateFindButtonState() {
+  const mode = getSelectedMode();
+  const missing = [];
+  if (!isLoggedIn) missing.push('connect your SoundCloud account');
+  if (!mode) missing.push('pick a track selection mode above');
+
+  findBtn.disabled = missing.length > 0;
+
+  if (missing.length > 0) {
+    findRequirementsEl.textContent = `👆 First, ${missing.join(' and ')}.`;
+    findRequirementsEl.classList.remove('hidden');
+  } else {
+    findRequirementsEl.classList.add('hidden');
   }
 }
 
+document.querySelectorAll('input[name="mode"]').forEach((radio) => {
+  radio.addEventListener('change', updateFindButtonState);
+});
+
+// --- Tabs --------------------------------------------------------------
+
 tabPaste.onclick = () => switchTab('paste');
 tabImage.onclick = () => switchTab('image');
-
-document.querySelectorAll('input[name="mode"]').forEach((radio) => {
-  radio.addEventListener('change', () => {
-    findBtn.disabled = false;
-  });
-});
 
 function switchTab(which) {
   const isPaste = which === 'paste';
@@ -49,15 +100,19 @@ function switchTab(which) {
   imagePanel.classList.toggle('hidden', isPaste);
 }
 
+// --- Image OCR extraction ----------------------------------------------
+
 extractBtn.onclick = async () => {
   const file = lineupImageEl.files[0];
   if (!file) {
-    showResult('📸 Choose an image first.', true);
+    showMessage(imageMessageEl, '📸 Choose an image first.', 'error');
     return;
   }
 
   setLoading(extractBtn, true, '🔍 Reading...');
   showLoading('🔍 Reading text from the image...');
+  hideMessage(imageMessageEl);
+
   try {
     const formData = new FormData();
     formData.append('image', file);
@@ -66,37 +121,38 @@ extractBtn.onclick = async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    // Prefill the paste textarea with what OCR found, and switch to it so
-    // the user can review/correct before matching. If the cleaned-up parse
-    // came back empty, fall back to showing the raw OCR text so there's
-    // still something to work with instead of a blank box.
-    const hasParsedArtists = data.artists.length > 0;
-    lineupTextEl.value = hasParsedArtists ? data.artists.join('\n') : data.rawText.trim();
-    switchTab('paste');
-
-    if (hasParsedArtists) {
-      showResult(
-        `✨ Extracted ${data.artists.length} possible artist names — review and edit the list above before continuing.`,
-        false
+    if (data.artists.length > 0) {
+      lineupTextEl.value = data.artists.join('\n');
+      switchTab('paste');
+      showMessage(
+        imageMessageEl,
+        `✨ Found ${data.artists.length} artist name${data.artists.length === 1 ? '' : 's'} in the image — they've been added to the "Paste text" box. Review them there before continuing.`,
+        'success'
       );
     } else if (data.rawText.trim()) {
-      showResult(
-        `🤔 Couldn't confidently pick out artist names, but here's the raw text found in the image — clean it up above before continuing.`,
-        true
+      lineupTextEl.value = data.rawText.trim();
+      switchTab('paste');
+      showMessage(
+        imageMessageEl,
+        `🤔 Couldn't confidently pick out artist names, but the raw text found in the image has been put in the "Paste text" box — clean it up there before continuing.`,
+        'error'
       );
     } else {
-      showResult(
+      showMessage(
+        imageMessageEl,
         `😕 No readable text found in that image at all — try a clearer or more cropped screenshot, or paste the lineup as text instead.`,
-        true
+        'error'
       );
     }
   } catch (err) {
-    showResult(err.message, true);
+    showMessage(imageMessageEl, `⚠️ ${err.message}`, 'error');
   } finally {
     hideLoading();
     setLoading(extractBtn, false, '🔍 Extract text from image');
   }
 };
+
+// --- Matching artists on SoundCloud -------------------------------------
 
 findBtn.onclick = async () => {
   const artists = lineupTextEl.value
@@ -104,8 +160,10 @@ findBtn.onclick = async () => {
     .map((a) => a.trim())
     .filter(Boolean);
 
+  hideMessage(matchMessageEl);
+
   if (artists.length === 0) {
-    showResult('✍️ Add at least one artist name first.', true);
+    showMessage(matchMessageEl, '✍️ Add at least one artist name first.', 'error');
     return;
   }
 
@@ -113,7 +171,6 @@ findBtn.onclick = async () => {
   showLoading('🎧 Searching SoundCloud for each artist...');
   lineupEl.classList.add('hidden');
   playlistActionsEl.classList.add('hidden');
-  resultEl.classList.add('hidden');
 
   try {
     const matchRes = await fetch('/api/match', {
@@ -125,12 +182,13 @@ findBtn.onclick = async () => {
     if (!matchRes.ok) throw new Error(matchData.error);
 
     currentMatches = matchData.matches;
+    excludedArtists = new Set();
     renderLineup(artists, currentMatches);
 
     playlistTitleInput.value = 'RTD Playlist';
     playlistActionsEl.classList.remove('hidden');
   } catch (err) {
-    showResult(err.message, true);
+    showMessage(matchMessageEl, `⚠️ ${err.message}`, 'error');
   } finally {
     hideLoading();
     setLoading(findBtn, false, '🔎 Find artists on SoundCloud');
@@ -147,25 +205,47 @@ function renderLineup(artists, matches) {
   lineupEl.innerHTML = '';
   artists.forEach((artist) => {
     const tracks = matches[artist] || [];
+    const hasMatch = tracks.length > 0;
+
     const card = document.createElement('div');
-    card.className = 'artist-card' + (tracks.length === 0 ? ' no-match' : '');
+    card.className = 'artist-card' + (hasMatch ? '' : ' no-match');
 
     let matchLabel;
-    if (tracks.length === 0) {
+    if (!hasMatch) {
       matchLabel = '❌ no match';
     } else {
       const mostPlayed = [...tracks].sort((a, b) => b.playback_count - a.playback_count)[0];
       matchLabel = `🔥 ${tracks.length} tracks found · top one has ${formatPlayCount(mostPlayed.playback_count)} plays`;
     }
 
+    const checkboxId = `include-${artist.replace(/\W+/g, '-')}`;
     card.innerHTML = `
-      <span class="name">🎤 ${artist}</span>
-      <span class="match">${matchLabel}</span>
+      <input type="checkbox" id="${checkboxId}" ${hasMatch ? 'checked' : 'disabled'} />
+      <label class="info" for="${checkboxId}">
+        <span class="name">🎤 ${artist}</span>
+        <span class="match">${matchLabel}</span>
+      </label>
     `;
+
+    const checkbox = card.querySelector('input');
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        excludedArtists.delete(artist);
+        card.classList.remove('excluded');
+      } else {
+        excludedArtists.add(artist);
+        card.classList.add('excluded');
+      }
+    });
+
+    if (!hasMatch) excludedArtists.add(artist);
+
     lineupEl.appendChild(card);
   });
   lineupEl.classList.remove('hidden');
 }
+
+// --- Track selection modes ----------------------------------------------
 
 // Given an artist's full pool of matched tracks, picks `count` of them
 // according to the chosen mode.
@@ -195,8 +275,6 @@ function pickTracks(tracks, mode, count) {
     case 'random':
       return shuffled(tracks).slice(0, count);
     case 'mixed': {
-      // Half the picks are the most-played (a safe anchor), the rest random
-      // from what's left, so the playlist isn't purely predictable.
       const topCount = Math.ceil(count / 2);
       const top = byPlaysDesc.slice(0, topCount);
       const topIds = new Set(top.map((t) => t.id));
@@ -208,20 +286,27 @@ function pickTracks(tracks, mode, count) {
   }
 }
 
+// --- Playlist creation ----------------------------------------------------
+
 createPlaylistBtn.onclick = async () => {
   const title = playlistTitleInput.value.trim();
-  if (!title) return;
+  hideMessage(playlistMessageEl);
 
-  const mode = document.querySelector('input[name="mode"]:checked').value;
+  if (!title) {
+    showMessage(playlistMessageEl, '✍️ Give the playlist a name first.', 'error');
+    return;
+  }
 
-  // Take up to 2 tracks per matched artist, chosen according to the
-  // selected mode, for a reasonably sized playlist.
-  const trackIds = Object.values(currentMatches)
-    .flatMap((tracks) => pickTracks(tracks, mode, 2))
+  const mode = getSelectedMode();
+  const countPerArtist = parseInt(tracksPerArtistEl.value, 10);
+
+  const trackIds = Object.entries(currentMatches)
+    .filter(([artist]) => !excludedArtists.has(artist))
+    .flatMap(([, tracks]) => pickTracks(tracks, mode, countPerArtist))
     .map((t) => t.id);
 
   if (trackIds.length === 0) {
-    showResult('😕 No tracks matched — nothing to add to a playlist.', true);
+    showMessage(playlistMessageEl, '😕 No tracks selected — check at least one artist above.', 'error');
     return;
   }
 
@@ -236,14 +321,20 @@ createPlaylistBtn.onclick = async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    showResult(`🎉 Playlist created! <a href="${data.playlist_url}" target="_blank">${data.playlist_url}</a>`, false);
+    showMessage(
+      playlistMessageEl,
+      `🎉 Playlist created! <a href="${data.playlist_url}" target="_blank">${data.playlist_url}</a>`,
+      'success'
+    );
   } catch (err) {
-    showResult(err.message, true);
+    showMessage(playlistMessageEl, `⚠️ ${err.message}`, 'error');
   } finally {
     hideLoading();
     setLoading(createPlaylistBtn, false, '🎶 Create SoundCloud playlist');
   }
 };
+
+// --- Small helpers ----------------------------------------------------
 
 function setLoading(button, isLoading, label) {
   button.disabled = isLoading;
@@ -259,10 +350,14 @@ function hideLoading() {
   loadingEl.classList.add('hidden');
 }
 
-function showResult(message, isError) {
-  resultEl.innerHTML = message;
-  resultEl.style.borderColor = isError ? '#c25b4a' : 'var(--border)';
-  resultEl.classList.remove('hidden');
+function showMessage(el, html, kind) {
+  el.innerHTML = html;
+  el.classList.remove('hidden', 'error', 'success');
+  el.classList.add(kind);
+}
+
+function hideMessage(el) {
+  el.classList.add('hidden');
 }
 
 refreshAuthStatus();

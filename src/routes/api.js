@@ -27,25 +27,47 @@ async function ensureFreshToken(req) {
   return req.session.soundcloud.access_token;
 }
 
+// Whole lines matching these are poster headers/dates/venue info, not
+// artist names — dropped before splitting into individual artist tokens.
+// Month/day patterns require an adjacent digit (real dates always pair a
+// month with a day or year number) — otherwise an artist name that merely
+// starts with those letters (e.g. "MARRØN") would false-positive on "mar".
+const NOISE_LINE_PATTERNS = [
+  /lineup/i,
+  /\b(mon|tue|wed|thu|fri|sat|sun)(day)?\b/i,
+  /\d{1,2}(st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i,
+  /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}\b/i,
+  /\d{1,2}\s*(am|pm)\b/i,
+];
+
+// Noise words/labels that sometimes appear attached directly to an artist
+// name with no separator (e.g. OCR reading "CASSIUS Live" as one chunk) —
+// stripped from the end of a token rather than only matched as a whole token.
+const TRAILING_NOISE_SUFFIX = /\s*\b(live|b2b|dj set|presents)\b\s*$/i;
+
 // Splits raw free-form text (pasted or OCR'd) into a clean artist list.
-// Handles one-per-line and comma-separated input, and common lineup poster
-// noise (b2b / live / DJ set labels, empty lines, stray punctuation).
+// Handles one-per-line, comma-separated, and bullet-separated input (lineup
+// posters commonly use "·", "•", or "|" between names on the same line),
+// plus common noise (date/venue header lines, b2b/live/DJ-set labels).
 function parseArtistsFromText(rawText) {
   if (!rawText) return [];
 
   const noiseWords = new Set(['b2b', 'live', 'dj set', 'dj', 'presents', 'w/']);
 
-  return rawText
-    .split(/[\n,]/)
+  const lines = rawText
+    .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
-    .filter((line) => !noiseWords.has(line.toLowerCase()))
-    .filter((line) => line.length >= 2 && line.length <= 60)
+    .filter((line) => !NOISE_LINE_PATTERNS.some((pattern) => pattern.test(line)));
+
+  return lines
+    .flatMap((line) => line.split(/[·•|,]/))
+    .map((token) => token.trim().replace(TRAILING_NOISE_SUFFIX, '').trim())
+    .filter(Boolean)
+    .filter((token) => !noiseWords.has(token.toLowerCase()))
+    .filter((token) => token.length >= 2 && token.length <= 60)
     // de-dupe, case-insensitive, keep first-seen casing
-    .filter((line, idx, arr) => {
-      const lower = line.toLowerCase();
-      return arr.findIndex((l) => l.toLowerCase() === lower) === idx;
-    });
+    .filter((token, idx, arr) => arr.findIndex((t) => t.toLowerCase() === token.toLowerCase()) === idx);
 }
 
 // POST /api/extract-image  (multipart form, field name "image")

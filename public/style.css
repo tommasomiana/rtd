@@ -42,19 +42,44 @@ header .subtitle {
   margin-top: 6px;
 }
 
-.auth-status {
-  margin-top: 16px;
-  font-size: 0.9rem;
+.auth-banner {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 85, 0, 0.4);
+  background: rgba(255, 85, 0, 0.1);
+  font-size: 0.92rem;
 }
 
-.auth-status a, .auth-status button {
-  color: var(--accent);
-  cursor: pointer;
-  background: none;
+.auth-banner.connected {
+  border-color: rgba(70, 200, 120, 0.4);
+  background: rgba(70, 200, 120, 0.08);
+}
+
+.auth-banner #auth-text {
+  flex: 1;
+}
+
+.auth-button {
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  white-space: nowrap;
   border: none;
-  font-size: 0.9rem;
-  padding: 0;
-  text-decoration: underline;
+  cursor: pointer;
+}
+
+.auth-banner.connected .auth-button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
 }
 
 .input-tabs {
@@ -117,6 +142,38 @@ textarea {
 
 .input-row button {
   width: 100%;
+}
+
+.section-message {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.section-message.error {
+  border-color: #c25b4a;
+  background: rgba(194, 91, 74, 0.1);
+}
+
+.section-message.success {
+  border-color: rgba(70, 200, 120, 0.4);
+  background: rgba(70, 200, 120, 0.08);
+}
+
+.section-message a {
+  color: var(--accent);
+}
+
+.hint-message {
+  background: none;
+  border: none;
+  padding: 8px 2px 0;
+  color: var(--muted);
+  text-align: center;
 }
 
 button {
@@ -208,8 +265,27 @@ input[type="text"] {
   border-radius: 10px;
   padding: 14px 16px;
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.artist-card input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.artist-card .info {
+  flex: 1;
+  display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+}
+
+.artist-card.excluded {
+  opacity: 0.45;
 }
 
 .artist-card .name {
@@ -219,10 +295,40 @@ input[type="text"] {
 .artist-card .match {
   color: var(--muted);
   font-size: 0.85rem;
+  text-align: right;
 }
 
 .artist-card.no-match .match {
   color: #c25b4a;
+}
+
+.playlist-config {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.tracks-per-artist {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.tracks-per-artist select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.playlist-config .hint {
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 
 .playlist-actions {
@@ -276,18 +382,6 @@ input[type="text"] {
 
 .mode-option input {
   accent-color: var(--accent);
-}
-
-.result {
-  margin-top: 24px;
-  padding: 16px;
-  border-radius: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-
-.result a {
-  color: var(--accent);
 }
 
 /* Always last: must win over any other single-class display rule
