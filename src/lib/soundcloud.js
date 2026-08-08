@@ -101,24 +101,35 @@ async function refreshToken(refresh_token) {
 
 // --- API calls ----------------------------------------------------------
 
+// Strips diacritics for comparison, so a plainly-typed "Bohmer" matches a
+// SoundCloud username spelled "Böhmer".
+function normalizeForCompare(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
 // Finds the SoundCloud user profile that best matches an artist name.
-// Prefers an exact (case-insensitive) username match; falls back to the
-// top search result, since SoundCloud's own relevance ranking is usually
-// reasonable when there's no exact match (e.g. slightly different casing
-// or spacing in how the artist's name was typed vs. their SC username).
+// Prefers an exact match (diacritic-insensitive, so typed-ASCII names
+// still match accented usernames); otherwise picks the candidate with the
+// most followers rather than just the first search result — SoundCloud's
+// own search ranking doesn't reliably put the well-known artist first,
+// which can otherwise surface an obscure same-named account instead of
+// e.g. the actual Ben Böhmer.
 async function findArtistUser(artistName, token) {
   const res = await axios.get(`${API_BASE}/users`, {
     headers: { Authorization: `OAuth ${token}` },
-    params: { q: artistName, limit: 5 },
+    params: { q: artistName, limit: 10 },
   });
 
   const users = res.data || [];
   if (users.length === 0) return null;
 
+  const normalizedQuery = normalizeForCompare(artistName);
   const exactMatch = users.find(
-    (u) => u.username && u.username.toLowerCase() === artistName.toLowerCase()
+    (u) => u.username && normalizeForCompare(u.username) === normalizedQuery
   );
-  return exactMatch || users[0];
+  if (exactMatch) return exactMatch;
+
+  return [...users].sort((a, b) => (b.followers_count || 0) - (a.followers_count || 0))[0];
 }
 
 async function getUserTracks(userId, token, limit) {
@@ -134,12 +145,16 @@ async function getUserTracks(userId, token, limit) {
 // Looks up their actual SoundCloud profile first and pulls from their own
 // uploads; only falls back to a keyword search (filtered to require the
 // artist's name in the uploader's username) if no matching profile exists.
+// Returns both the matched profile (for the UI to show as confirmation)
+// and the track pool.
 async function searchArtistTracks(artistName, token, poolSize = 15) {
   const user = await findArtistUser(artistName, token);
 
   if (user) {
     const tracks = await getUserTracks(user.id, token, poolSize);
-    if (tracks.length > 0) return tracks;
+    if (tracks.length > 0) {
+      return { matchedUser: user, tracks };
+    }
   }
 
   // Fallback: no clear profile match, or that profile has no public
@@ -150,11 +165,13 @@ async function searchArtistTracks(artistName, token, poolSize = 15) {
     headers: { Authorization: `OAuth ${token}` },
     params: { q: artistName, limit: poolSize * 2 },
   });
-  const tracks = res.data || [];
+  const allTracks = res.data || [];
   const needle = artistName.toLowerCase();
-  return tracks
+  const tracks = allTracks
     .filter((t) => t.user?.username && t.user.username.toLowerCase().includes(needle))
     .slice(0, poolSize);
+
+  return { matchedUser: user || null, tracks };
 }
 
 async function createPlaylist({ token, title, trackIds, isPublic = false }) {

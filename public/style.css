@@ -405,6 +405,20 @@ button.secondary {
   flex-shrink: 0;
 }
 
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bg-raised-2);
+}
+
+.avatar-placeholder {
+  display: inline-block;
+  border: 1px dashed var(--border);
+}
+
 .artist-card .info {
   flex: 1;
   display: flex;
@@ -412,6 +426,21 @@ button.secondary {
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  min-width: 0;
+}
+
+.name-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.matched-as {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .artist-card.excluded {

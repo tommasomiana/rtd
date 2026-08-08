@@ -201,17 +201,31 @@ findBtn.onclick = async () => {
 function renderLineup(artists, matches) {
   lineupEl.innerHTML = '';
   artists.forEach((artist) => {
-    const tracks = matches[artist] || [];
+    const data = matches[artist] || { matchedUser: null, tracks: [] };
+    const tracks = data.tracks || [];
+    const matchedUser = data.matchedUser;
     const hasMatch = tracks.length > 0;
 
     const card = document.createElement('div');
     card.className = 'artist-card' + (hasMatch ? '' : ' no-match');
 
+    const avatarHtml = matchedUser?.avatar_url
+      ? `<img class="avatar" src="${matchedUser.avatar_url}" alt="" />`
+      : `<span class="avatar avatar-placeholder"></span>`;
+
+    const matchedAsHtml = matchedUser
+      ? `<span class="matched-as">as ${matchedUser.username}</span>`
+      : '';
+
     const checkboxId = `include-${artist.replace(/\W+/g, '-')}`;
     card.innerHTML = `
       <input type="checkbox" id="${checkboxId}" ${hasMatch ? 'checked' : 'disabled'} />
+      ${avatarHtml}
       <label class="info" for="${checkboxId}">
-        <span class="name">${artist}</span>
+        <span class="name-block">
+          <span class="name">${artist}</span>
+          ${matchedAsHtml}
+        </span>
         <span class="match"><span class="status-dot"></span>${hasMatch ? 'matched' : 'no match'}</span>
       </label>
     `;
@@ -301,7 +315,7 @@ createPlaylistBtn.onclick = async () => {
 
   const trackIds = Object.entries(currentMatches)
     .filter(([artist]) => !excludedArtists.has(artist))
-    .flatMap(([, tracks]) => pickTracks(tracks, mode, countPerArtist, includeDjSets))
+    .flatMap(([, data]) => pickTracks(data.tracks, mode, countPerArtist, includeDjSets))
     .map((t) => t.id);
 
   if (trackIds.length === 0) {

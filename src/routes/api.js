@@ -134,20 +134,29 @@ router.post('/match', async (req, res) => {
     const results = {};
     for (const artist of artists) {
       try {
-        const tracks = await sc.searchArtistTracks(artist, token, 20);
-        results[artist] = tracks.map((t) => ({
-          id: t.id,
-          title: t.title,
-          permalink_url: t.permalink_url,
-          artwork_url: t.artwork_url,
-          user: t.user?.username,
-          playback_count: t.playback_count || 0,
-          created_at: t.created_at || null,
-          duration: t.duration || 0, // milliseconds
-        }));
+        const { matchedUser, tracks } = await sc.searchArtistTracks(artist, token, 20);
+        results[artist] = {
+          matchedUser: matchedUser
+            ? {
+                username: matchedUser.username,
+                avatar_url: matchedUser.avatar_url,
+                permalink_url: matchedUser.permalink_url,
+              }
+            : null,
+          tracks: tracks.map((t) => ({
+            id: t.id,
+            title: t.title,
+            permalink_url: t.permalink_url,
+            artwork_url: t.artwork_url,
+            user: t.user?.username,
+            playback_count: t.playback_count || 0,
+            created_at: t.created_at || null,
+            duration: t.duration || 0, // milliseconds
+          })),
+        };
       } catch (err) {
         console.error(`Search failed for "${artist}":`, err.response?.data || err.message);
-        results[artist] = [];
+        results[artist] = { matchedUser: null, tracks: [] };
       }
     }
 
