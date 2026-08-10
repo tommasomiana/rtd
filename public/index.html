@@ -35,6 +35,7 @@
         <section class="input-tabs">
           <button id="tab-paste" class="tab active">Paste</button>
           <button id="tab-image" class="tab">Screenshot</button>
+          <button id="tab-link" class="tab">Dice link</button>
         </section>
 
         <section id="paste-panel" class="panel">
@@ -47,6 +48,13 @@
           <button id="extract-btn" class="secondary">Extract text</button>
           <p class="hint">Works best on a clear, cropped screenshot.</p>
           <p id="image-message" class="section-message hidden"></p>
+        </section>
+
+        <section id="link-panel" class="panel hidden">
+          <input id="lineup-link" type="url" placeholder="https://dice.fm/event/..." />
+          <button id="fetch-link-btn" class="secondary">Fetch lineup</button>
+          <p class="hint">Dice.fm event links only — Resident Advisor blocks this kind of request.</p>
+          <p id="link-message" class="section-message hidden"></p>
         </section>
       </div>
     </section>

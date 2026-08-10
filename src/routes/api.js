@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const sc = require('../lib/soundcloud');
 const { extractTextFromImage } = require('../lib/ocr');
+const { scrapeDiceEvent } = require('../lib/diceScraper');
 
 const router = express.Router();
 const upload = multer({
@@ -115,6 +116,49 @@ router.post('/extract-image', upload.single('image'), async (req, res) => {
   } catch (err) {
     console.error('OCR failed:', err.message);
     res.status(500).json({ error: 'Failed to read text from that image.' });
+  }
+});
+
+// POST /api/lineup-from-link { eventUrl }
+// Currently supports Dice.fm event links only. Resident Advisor (ra.co) is
+// intentionally not supported — it sits behind DataDome bot protection that
+// blocks this kind of automated fetch even with a real headless browser.
+router.post('/lineup-from-link', async (req, res) => {
+  const { eventUrl } = req.body;
+  if (!eventUrl) {
+    return res.status(400).json({ error: 'Please provide an event URL.' });
+  }
+
+  let hostname;
+  try {
+    hostname = new URL(eventUrl).hostname;
+  } catch (e) {
+    return res.status(400).json({ error: 'That doesn\'t look like a valid URL.' });
+  }
+
+  if (hostname.includes('ra.co')) {
+    return res.status(400).json({
+      error:
+        "Resident Advisor links aren't supported — RA blocks automated requests. Paste the lineup as text or upload a screenshot instead.",
+    });
+  }
+  if (!hostname.includes('dice.fm')) {
+    return res.status(400).json({ error: 'Only Dice.fm event links are supported right now.' });
+  }
+
+  try {
+    const result = await scrapeDiceEvent(eventUrl);
+    const artists = result.artists.filter((name) => name && name.length >= 2 && name.length <= 60);
+    console.log(`Dice lineup fetch for "${eventUrl}": found ${artists.length} artists`);
+    if (artists.length === 0) {
+      return res.status(422).json({
+        error: 'Could not find a lineup on that page — Dice may have changed their layout.',
+      });
+    }
+    res.json({ eventTitle: result.eventTitle, artists });
+  } catch (err) {
+    console.error('Dice lineup fetch failed:', err.response?.status, err.message);
+    res.status(500).json({ error: 'Failed to fetch or parse that event page.' });
   }
 });
 

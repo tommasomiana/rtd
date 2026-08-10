@@ -529,7 +529,7 @@ button.secondary {
   gap: 10px;
 }
 
-input[type="text"] {
+input[type="text"], input[type="url"] {
   padding: 12px 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -537,6 +537,12 @@ input[type="text"] {
   color: var(--text);
   font-size: 0.95rem;
   font-family: var(--font-body);
+  width: 100%;
+}
+
+#link-panel input[type="url"] {
+  margin-bottom: 10px;
+  background: var(--bg);
 }
 
 /* Always last: must win over any other single-class display rule

@@ -5,13 +5,18 @@ const authActionEl = document.getElementById('auth-action');
 
 const tabPaste = document.getElementById('tab-paste');
 const tabImage = document.getElementById('tab-image');
+const tabLink = document.getElementById('tab-link');
 const pastePanel = document.getElementById('paste-panel');
 const imagePanel = document.getElementById('image-panel');
+const linkPanel = document.getElementById('link-panel');
 const lineupTextEl = document.getElementById('lineup-text');
 const lineupImageEl = document.getElementById('lineup-image');
 const extractBtn = document.getElementById('extract-btn');
 const imageMessageEl = document.getElementById('image-message');
 const pasteMessageEl = document.getElementById('paste-message');
+const lineupLinkEl = document.getElementById('lineup-link');
+const fetchLinkBtn = document.getElementById('fetch-link-btn');
+const linkMessageEl = document.getElementById('link-message');
 
 const findBtn = document.getElementById('find-btn');
 const findRequirementsEl = document.getElementById('find-requirements');
@@ -93,13 +98,15 @@ document.querySelectorAll('input[name="mode"]').forEach((radio) => {
 
 tabPaste.onclick = () => switchTab('paste');
 tabImage.onclick = () => switchTab('image');
+tabLink.onclick = () => switchTab('link');
 
 function switchTab(which) {
-  const isPaste = which === 'paste';
-  tabPaste.classList.toggle('active', isPaste);
-  tabImage.classList.toggle('active', !isPaste);
-  pastePanel.classList.toggle('hidden', !isPaste);
-  imagePanel.classList.toggle('hidden', isPaste);
+  tabPaste.classList.toggle('active', which === 'paste');
+  tabImage.classList.toggle('active', which === 'image');
+  tabLink.classList.toggle('active', which === 'link');
+  pastePanel.classList.toggle('hidden', which !== 'paste');
+  imagePanel.classList.toggle('hidden', which !== 'image');
+  linkPanel.classList.toggle('hidden', which !== 'link');
 }
 
 // --- Image OCR extraction ----------------------------------------------
@@ -152,6 +159,44 @@ extractBtn.onclick = async () => {
   } finally {
     hideLoading();
     setLoading(extractBtn, false, 'Extract text');
+  }
+};
+
+// --- Dice event link fetch ----------------------------------------------
+
+fetchLinkBtn.onclick = async () => {
+  const eventUrl = lineupLinkEl.value.trim();
+  if (!eventUrl) {
+    showMessage(linkMessageEl, 'Paste a Dice.fm event link first.', 'error');
+    return;
+  }
+
+  setLoading(fetchLinkBtn, true, 'Fetching...');
+  showLoading('Fetching the lineup...');
+  hideMessage(linkMessageEl);
+  hideMessage(pasteMessageEl);
+
+  try {
+    const res = await fetch('/api/lineup-from-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventUrl }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    lineupTextEl.value = data.artists.join('\n');
+    switchTab('paste');
+    showMessage(
+      pasteMessageEl,
+      `Found ${data.artists.length} artist${data.artists.length === 1 ? '' : 's'}${data.eventTitle ? ` for "${data.eventTitle}"` : ''} — double-check the list below.`,
+      'success'
+    );
+  } catch (err) {
+    showMessage(linkMessageEl, err.message, 'error');
+  } finally {
+    hideLoading();
+    setLoading(fetchLinkBtn, false, 'Fetch lineup');
   }
 };
 
