@@ -10,36 +10,44 @@ const cheerio = require('cheerio');
  * axios GET + cheerio parse, no headless browser needed.
  *
  * Dice event pages link each lineup artist to their own profile at
- * /artist/<slug>, which is used as the primary extraction strategy (the
- * same approach that worked reliably for RA's /dj/ links). The page's
- * "Lineup" section visually truncates to a few names + "and N more" behind
- * a "Show more" toggle, but the underlying links for the full lineup are
- * expected to already be present in the HTML (client-side show/hide),
- * not lazy-loaded — the __NEXT_DATA__ JSON blob is kept as a fallback in
- * case that assumption is wrong or Dice changes their markup.
+ * /artist/<slug>, which is the (only) extraction strategy — verified
+ * against a real event page. There is deliberately no JSON-blob fallback:
+ * an earlier naive scan for any field named "name" anywhere in the page's
+ * embedded JSON picked up unrelated content (e.g. a partner widget
+ * configurator's form labels) when a link ended up somewhere other than
+ * a real event page, which is worse than honestly reporting no lineup found.
  *
- * NOTE: this hasn't been tested end-to-end against a live event page from
- * this environment (dice.fm isn't reachable from this sandbox's network).
- * If the artist list comes back incomplete or empty, inspect a real event
- * page's HTML for the actual lineup markup and adjust extractFromDom /
- * extractFromNextData accordingly.
+ * NOTE: link.dice.fm short links redirect somewhere before landing on the
+ * final page — axios follows redirects by default (maxRedirects: 10 here),
+ * and the resolved URL is logged for diagnosis. If a short link doesn't
+ * resolve to a normal /event/... page, this will correctly find 0 artists.
  */
 async function scrapeDiceEvent(eventUrl) {
-  const { data: html } = await axios.get(eventUrl, {
+  const response = await axios.get(eventUrl, {
     headers: {
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36',
       Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
     },
+    maxRedirects: 10,
   });
 
-  const $ = cheerio.load(html);
+  const finalUrl = response.request?.res?.responseUrl || response.request?.responseURL || eventUrl;
+  console.log(`[dice-scrape] "${eventUrl}" resolved to: ${finalUrl}`);
+
+  const $ = cheerio.load(response.data);
 
   const fromDom = extractFromDom($);
+  console.log(`[dice-scrape] DOM /artist/ links found: ${fromDom.artists.length}`);
   if (fromDom.artists.length > 0) return fromDom;
 
-  return extractFromNextData($) || fromDom;
+  // No __NEXT_DATA__ fallback here (deliberately removed): a naive scan for
+  // any JSON field named "name" turned out to pick up unrelated page
+  // content (e.g. a partner widget configurator's form labels) when the
+  // DOM strategy found nothing — which is worse than just reporting no
+  // lineup found. If /artist/ links aren't present, treat as no lineup.
+  return fromDom;
 }
 
 function extractFromDom($) {
@@ -58,40 +66,6 @@ function extractFromDom($) {
   const eventTitle = $('h1').first().text().trim() || null;
 
   return { eventTitle, artists };
-}
-
-function extractFromNextData($) {
-  const empty = { eventTitle: null, artists: [] };
-  const script = $('#__NEXT_DATA__').html();
-  if (!script) return empty;
-
-  let json;
-  try {
-    json = JSON.parse(script);
-  } catch (e) {
-    return empty;
-  }
-
-  const artists = new Set();
-  let eventTitle = null;
-
-  function walk(node) {
-    if (!node || typeof node !== 'object') return;
-    if (Array.isArray(node)) {
-      node.forEach(walk);
-      return;
-    }
-    if (node.name && typeof node.name === 'string' && node.name.length < 60) {
-      artists.add(node.name.trim());
-    }
-    if (!eventTitle && node.title && typeof node.title === 'string' && node.date) {
-      eventTitle = node.title;
-    }
-    Object.values(node).forEach(walk);
-  }
-
-  walk(json);
-  return { eventTitle, artists: Array.from(artists) };
 }
 
 module.exports = { scrapeDiceEvent };

@@ -152,7 +152,8 @@ router.post('/lineup-from-link', async (req, res) => {
     console.log(`Dice lineup fetch for "${eventUrl}": found ${artists.length} artists`);
     if (artists.length === 0) {
       return res.status(422).json({
-        error: 'Could not find a lineup on that page — Dice may have changed their layout.',
+        error:
+          'Could not find a lineup on that page. If you used a link.dice.fm short link, try opening it in a browser first and pasting the full dice.fm/event/... URL instead.',
       });
     }
     res.json({ eventTitle: result.eventTitle, artists });
