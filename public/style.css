@@ -152,6 +152,9 @@ header .subtitle {
 .step-body {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .step > .auth-banner {
@@ -204,30 +207,7 @@ header .subtitle {
   color: var(--text-dim);
 }
 
-/* --- Tabs & panels --- */
-
-.input-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.tab {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.88rem;
-  font-family: var(--font-body);
-}
-
-.tab.active {
-  color: var(--text);
-  background: var(--bg-raised);
-  border-color: var(--accent);
-}
+/* --- Panels --- */
 
 .panel {
   background: var(--bg-raised);
@@ -252,13 +232,6 @@ textarea {
 textarea:focus, input:focus, select:focus {
   outline: none;
   border-color: var(--accent);
-}
-
-.panel input[type="file"] {
-  color: var(--text-dim);
-  margin-bottom: 10px;
-  display: block;
-  font-size: 0.88rem;
 }
 
 .hint {
@@ -296,9 +269,22 @@ button.secondary {
   color: var(--text);
 }
 
-#find-btn, #create-playlist-btn {
+#find-btn, #create-playlist-btn, #search-event-btn {
   width: 100%;
-  margin-top: 14px;
+  margin-top: 10px;
+}
+
+/* --- Inputs --- */
+
+input[type="text"], input[type="url"] {
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+  width: 100%;
 }
 
 /* --- Messages --- */
@@ -380,10 +366,54 @@ button.secondary {
   font-size: 0.9rem;
 }
 
+/* --- Event candidates --- */
+
+.candidates {
+  display: grid;
+  gap: 8px;
+}
+
+.candidate-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.candidate-card .candidate-title {
+  font-weight: 700;
+  font-size: 1rem;
+  font-family: var(--font-display);
+}
+
+.candidate-card .candidate-meta {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.candidate-card .candidate-source {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.candidate-card button {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.candidates-none {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-dim);
+}
+
 /* --- Lineup / artist cards --- */
 
 .lineup {
-  margin-top: 18px;
+  margin-top: 4px;
   display: grid;
   gap: 8px;
 }
@@ -527,22 +557,6 @@ button.secondary {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-input[type="text"], input[type="url"] {
-  padding: 12px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg-raised);
-  color: var(--text);
-  font-size: 0.95rem;
-  font-family: var(--font-body);
-  width: 100%;
-}
-
-#link-panel input[type="url"] {
-  margin-bottom: 10px;
-  background: var(--bg);
 }
 
 /* Always last: must win over any other single-class display rule

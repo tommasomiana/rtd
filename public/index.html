@@ -17,7 +17,7 @@
         <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
         <h1>RtD <span class="subtitle">Ready to Dance</span></h1>
       </div>
-      <p class="tagline">lineup <span class="arrow">→</span> playlist</p>
+      <p class="tagline">event <span class="arrow">→</span> playlist</p>
     </header>
 
     <section class="step">
@@ -32,30 +32,20 @@
     <section class="step">
       <span class="step-num">2</span>
       <div class="step-body">
-        <section class="input-tabs">
-          <button id="tab-paste" class="tab active">Paste</button>
-          <button id="tab-image" class="tab">Screenshot</button>
-          <button id="tab-link" class="tab">Dice link</button>
-        </section>
+        <div class="panel">
+          <input id="event-query" type="text" placeholder="e.g. Brunch Electronik 2026, Barcelona" />
+          <button id="search-event-btn" class="secondary">Search</button>
+          <p class="hint">An AI agent searches the web and proposes matching events to confirm.</p>
+          <p id="search-message" class="section-message hidden"></p>
+        </div>
 
-        <section id="paste-panel" class="panel">
-          <textarea id="lineup-text" rows="6" placeholder="One artist per line, or comma-separated&#10;e.g.&#10;Acid Arab&#10;Âme b2b Trikk&#10;Floating Points"></textarea>
-          <p id="paste-message" class="section-message hidden"></p>
-        </section>
+        <div id="candidates" class="candidates hidden"></div>
 
-        <section id="image-panel" class="panel hidden">
-          <input id="lineup-image" type="file" accept="image/*" />
-          <button id="extract-btn" class="secondary">Extract text</button>
-          <p class="hint">Works best on a clear, cropped screenshot.</p>
-          <p id="image-message" class="section-message hidden"></p>
-        </section>
-
-        <section id="link-panel" class="panel hidden">
-          <input id="lineup-link" type="url" placeholder="https://dice.fm/event/..." />
-          <button id="fetch-link-btn" class="secondary">Fetch lineup</button>
-          <p class="hint">Dice.fm event links only — Resident Advisor blocks this kind of request.</p>
-          <p id="link-message" class="section-message hidden"></p>
-        </section>
+        <div id="lineup-review" class="panel hidden">
+          <p class="hint">Review the lineup — edit if needed.</p>
+          <textarea id="lineup-text" rows="6"></textarea>
+          <p id="lineup-message" class="section-message hidden"></p>
+        </div>
       </div>
     </section>
 

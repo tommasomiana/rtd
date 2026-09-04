@@ -82,7 +82,7 @@ async function exchangeCodeForToken({ code, codeVerifier }) {
     }),
     { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
   );
-  return res.data; // { access_token, refresh_token, expires_in, ... }
+  return res.data;
 }
 
 async function refreshToken(refresh_token) {
@@ -109,11 +109,11 @@ function normalizeForCompare(str) {
 
 // Finds the SoundCloud user profile that best matches an artist name.
 // Prefers an exact match (diacritic-insensitive, so typed-ASCII names
-// still match accented usernames); otherwise picks the candidate with the
-// most followers rather than just the first search result — SoundCloud's
-// own search ranking doesn't reliably put the well-known artist first,
-// which can otherwise surface an obscure same-named account instead of
-// e.g. the actual Ben Böhmer.
+// still match accented usernames) — and among MULTIPLE exact matches
+// (common: a popular real account plus several tiny copycat/fan accounts
+// with the same normalized name), picks the one with the most followers.
+// Falls back to the highest-follower candidate overall if there's no
+// exact match at all.
 async function findArtistUser(artistName, token) {
   const res = await axios.get(`${API_BASE}/users`, {
     headers: { Authorization: `OAuth ${token}` },
@@ -166,9 +166,11 @@ async function getUserTracks(userId, token, limit) {
 // just any track whose title/description happens to mention their name.
 // Looks up their actual SoundCloud profile first and pulls from their own
 // uploads; only falls back to a keyword search (filtered to require the
-// artist's name in the uploader's username) if no matching profile exists.
-// Returns both the matched profile (for the UI to show as confirmation)
-// and the track pool.
+// artist's name in the uploader's username) if no matching profile exists
+// or that profile's own-uploads endpoint returns nothing (common for
+// label-distributed artists — their catalog often isn't exposed there
+// even though it's publicly playable). Returns both the matched profile
+// (for the UI to show as confirmation) and the track pool.
 async function searchArtistTracks(artistName, token, poolSize = 15) {
   const user = await findArtistUser(artistName, token);
 
@@ -179,13 +181,6 @@ async function searchArtistTracks(artistName, token, poolSize = 15) {
     }
   }
 
-  // Fallback: no clear profile match, or that profile has no public
-  // tracks via the direct endpoint — common for label-distributed artists
-  // (Anjunadeep, Young Turks, etc.), whose catalog often isn't exposed
-  // through users/{id}/tracks even though it's publicly playable.
-  // Use keyword search, filtered to require the artist's name actually
-  // appear in the uploader's username (diacritic-insensitive) — otherwise
-  // this would match any track that merely mentions the artist in its title.
   const res = await axios.get(`${API_BASE}/tracks`, {
     headers: { Authorization: `OAuth ${token}` },
     params: { q: artistName, limit: poolSize * 4 },

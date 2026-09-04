@@ -3,20 +3,13 @@ const authIconEl = document.getElementById('auth-icon');
 const authTextEl = document.getElementById('auth-text');
 const authActionEl = document.getElementById('auth-action');
 
-const tabPaste = document.getElementById('tab-paste');
-const tabImage = document.getElementById('tab-image');
-const tabLink = document.getElementById('tab-link');
-const pastePanel = document.getElementById('paste-panel');
-const imagePanel = document.getElementById('image-panel');
-const linkPanel = document.getElementById('link-panel');
+const eventQueryEl = document.getElementById('event-query');
+const searchEventBtn = document.getElementById('search-event-btn');
+const searchMessageEl = document.getElementById('search-message');
+const candidatesEl = document.getElementById('candidates');
+const lineupReviewEl = document.getElementById('lineup-review');
 const lineupTextEl = document.getElementById('lineup-text');
-const lineupImageEl = document.getElementById('lineup-image');
-const extractBtn = document.getElementById('extract-btn');
-const imageMessageEl = document.getElementById('image-message');
-const pasteMessageEl = document.getElementById('paste-message');
-const lineupLinkEl = document.getElementById('lineup-link');
-const fetchLinkBtn = document.getElementById('fetch-link-btn');
-const linkMessageEl = document.getElementById('link-message');
+const lineupMessageEl = document.getElementById('lineup-message');
 
 const findBtn = document.getElementById('find-btn');
 const findRequirementsEl = document.getElementById('find-requirements');
@@ -33,7 +26,7 @@ const playlistTitleInput = document.getElementById('playlist-title');
 const createPlaylistBtn = document.getElementById('create-playlist-btn');
 const playlistMessageEl = document.getElementById('playlist-message');
 
-let currentMatches = {}; // { artistName: [tracks] }
+let currentMatches = {}; // { artistName: { matchedUser, tracks } }
 let excludedArtists = new Set();
 let isLoggedIn = false;
 
@@ -76,13 +69,10 @@ function getSelectedMode() {
 
 function updateFindButtonState() {
   const mode = getSelectedMode();
-  const missing = [];
-  if (!isLoggedIn) missing.push('connect your SoundCloud account');
-  if (!mode) missing.push('pick a track selection mode above');
+  const missing = !isLoggedIn || !mode;
+  findBtn.disabled = missing;
 
-  findBtn.disabled = missing.length > 0;
-
-  if (missing.length > 0) {
+  if (missing) {
     findRequirementsEl.textContent = `Connect SoundCloud and pick a vibe to continue.`;
     findRequirementsEl.classList.remove('hidden');
   } else {
@@ -94,111 +84,96 @@ document.querySelectorAll('input[name="mode"]').forEach((radio) => {
   radio.addEventListener('change', updateFindButtonState);
 });
 
-// --- Tabs --------------------------------------------------------------
+// --- Event search (AI agent) ---------------------------------------------
 
-tabPaste.onclick = () => switchTab('paste');
-tabImage.onclick = () => switchTab('image');
-tabLink.onclick = () => switchTab('link');
+searchEventBtn.onclick = async () => {
+  const query = eventQueryEl.value.trim();
+  hideMessage(searchMessageEl);
+  candidatesEl.classList.add('hidden');
+  candidatesEl.innerHTML = '';
+  lineupReviewEl.classList.add('hidden');
 
-function switchTab(which) {
-  tabPaste.classList.toggle('active', which === 'paste');
-  tabImage.classList.toggle('active', which === 'image');
-  tabLink.classList.toggle('active', which === 'link');
-  pastePanel.classList.toggle('hidden', which !== 'paste');
-  imagePanel.classList.toggle('hidden', which !== 'image');
-  linkPanel.classList.toggle('hidden', which !== 'link');
-}
-
-// --- Image OCR extraction ----------------------------------------------
-
-extractBtn.onclick = async () => {
-  const file = lineupImageEl.files[0];
-  if (!file) {
-    showMessage(imageMessageEl, 'Choose an image first.', 'error');
+  if (!query) {
+    showMessage(searchMessageEl, 'Type an event name first.', 'error');
     return;
   }
 
-  setLoading(extractBtn, true, 'Reading...');
-  showLoading('Reading text from the image...');
-  hideMessage(imageMessageEl);
-  hideMessage(pasteMessageEl);
+  setLoading(searchEventBtn, true, 'Searching...');
+  showLoading('Searching for that event...');
 
   try {
-    const formData = new FormData();
-    formData.append('image', file);
-
-    const res = await fetch('/api/extract-image', { method: 'POST', body: formData });
+    const res = await fetch('/api/agent/find-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    if (data.artists.length > 0) {
-      lineupTextEl.value = data.artists.join('\n');
-      switchTab('paste');
-      showMessage(
-        pasteMessageEl,
-        `Found ${data.artists.length} possible artist name${data.artists.length === 1 ? '' : 's'} — double-check the list below (OCR isn't perfect on busy posters).`,
-        'success'
-      );
-    } else if (data.rawText.trim()) {
-      lineupTextEl.value = data.rawText.trim();
-      switchTab('paste');
-      showMessage(
-        pasteMessageEl,
-        `Couldn't isolate artist names — here's the raw text instead. Clean it up below.`,
-        'error'
-      );
-    } else {
-      showMessage(
-        imageMessageEl,
-        `No readable text found in that image — try a clearer screenshot, or paste the lineup as text.`,
-        'error'
-      );
-    }
+    renderCandidates(data.candidates || []);
   } catch (err) {
-    showMessage(imageMessageEl, err.message, 'error');
+    showMessage(searchMessageEl, err.message, 'error');
   } finally {
     hideLoading();
-    setLoading(extractBtn, false, 'Extract text');
+    setLoading(searchEventBtn, false, 'Search');
   }
 };
 
-// --- Dice event link fetch ----------------------------------------------
+function renderCandidates(candidates) {
+  candidatesEl.innerHTML = '';
 
-fetchLinkBtn.onclick = async () => {
-  const eventUrl = lineupLinkEl.value.trim();
-  if (!eventUrl) {
-    showMessage(linkMessageEl, 'Paste a Dice.fm event link first.', 'error');
+  if (candidates.length === 0) {
+    candidatesEl.innerHTML = `<div class="candidate-card candidates-none">No confident matches found — try adding a city or date to your search.</div>`;
+    candidatesEl.classList.remove('hidden');
     return;
   }
 
-  setLoading(fetchLinkBtn, true, 'Fetching...');
-  showLoading('Fetching the lineup...');
-  hideMessage(linkMessageEl);
-  hideMessage(pasteMessageEl);
+  candidates.forEach((candidate) => {
+    const card = document.createElement('div');
+    card.className = 'candidate-card';
+    card.innerHTML = `
+      <span class="candidate-title">${candidate.title || 'Untitled event'}</span>
+      <span class="candidate-meta">${[candidate.date, candidate.venue].filter(Boolean).join(' · ')}</span>
+      <span class="candidate-source">${candidate.source || ''}</span>
+      <button class="secondary">Use this event</button>
+    `;
+    card.querySelector('button').onclick = () => confirmCandidate(candidate);
+    candidatesEl.appendChild(card);
+  });
+
+  candidatesEl.classList.remove('hidden');
+}
+
+async function confirmCandidate(candidate) {
+  candidatesEl.classList.add('hidden');
+  hideMessage(lineupMessageEl);
+  setLoading(searchEventBtn, true, 'Searching...');
+  showLoading('Finding the lineup...');
 
   try {
-    const res = await fetch('/api/lineup-from-link', {
+    const res = await fetch('/api/agent/lineup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ eventUrl }),
+      body: JSON.stringify({ candidate }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
     lineupTextEl.value = data.artists.join('\n');
-    switchTab('paste');
+    lineupReviewEl.classList.remove('hidden');
     showMessage(
-      pasteMessageEl,
-      `Found ${data.artists.length} artist${data.artists.length === 1 ? '' : 's'}${data.eventTitle ? ` for "${data.eventTitle}"` : ''} — double-check the list below.`,
+      lineupMessageEl,
+      `Found ${data.artists.length} artist${data.artists.length === 1 ? '' : 's'} for "${data.eventTitle}" — double-check the list before continuing.`,
       'success'
     );
   } catch (err) {
-    showMessage(linkMessageEl, err.message, 'error');
+    candidatesEl.classList.remove('hidden');
+    showMessage(searchMessageEl, err.message, 'error');
   } finally {
     hideLoading();
-    setLoading(fetchLinkBtn, false, 'Fetch lineup');
+    setLoading(searchEventBtn, false, 'Search');
   }
-};
+}
 
 // --- Matching artists on SoundCloud -------------------------------------
 
@@ -258,9 +233,7 @@ function renderLineup(artists, matches) {
       ? `<img class="avatar" src="${matchedUser.avatar_url}" alt="" />`
       : `<span class="avatar avatar-placeholder"></span>`;
 
-    const matchedAsHtml = matchedUser
-      ? `<span class="matched-as">as ${matchedUser.username}</span>`
-      : '';
+    const matchedAsHtml = matchedUser ? `<span class="matched-as">as ${matchedUser.username}</span>` : '';
 
     const checkboxId = `include-${artist.replace(/\W+/g, '-')}`;
     card.innerHTML = `
@@ -295,18 +268,10 @@ function renderLineup(artists, matches) {
 
 // --- Track selection modes ----------------------------------------------
 
-// Tracks longer than this are almost always a DJ set/mix rather than a
-// single track — real singles rarely run past this even in house/techno.
 const DJ_SET_THRESHOLD_MS = 15 * 60 * 1000;
 
-// Given an artist's full pool of matched tracks, picks `count` of them
-// according to the chosen mode. `includeDjSets` controls whether long
-// mixes/sets are eligible at all before the mode's own logic runs.
 function pickTracks(tracks, mode, count, includeDjSets) {
-  const eligible = includeDjSets
-    ? tracks
-    : tracks.filter((t) => t.duration < DJ_SET_THRESHOLD_MS);
-
+  const eligible = includeDjSets ? tracks : tracks.filter((t) => t.duration < DJ_SET_THRESHOLD_MS);
   if (eligible.length === 0) return [];
 
   const byPlaysDesc = [...eligible].sort((a, b) => b.playback_count - a.playback_count);

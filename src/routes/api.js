@@ -1,14 +1,8 @@
 const express = require('express');
-const multer = require('multer');
 const sc = require('../lib/soundcloud');
-const { extractTextFromImage } = require('../lib/ocr');
-const { scrapeDiceEvent } = require('../lib/diceScraper');
+const agent = require('../lib/agent');
 
 const router = express.Router();
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
-});
 
 // Makes sure req.session.soundcloud.access_token is valid, refreshing if needed
 async function ensureFreshToken(req) {
@@ -28,138 +22,45 @@ async function ensureFreshToken(req) {
   return req.session.soundcloud.access_token;
 }
 
-// Whole lines matching these are poster headers/dates/venue info, not
-// artist names — dropped before splitting into individual artist tokens.
-// Month/day patterns require an adjacent digit (real dates always pair a
-// month with a day or year number) — otherwise an artist name that merely
-// starts with those letters (e.g. "MARRØN") would false-positive on "mar".
-const NOISE_LINE_PATTERNS = [
-  /lineup/i,
-  /\b(mon|tue|wed|thu|fri|sat|sun)(day)?\b/i,
-  /\d{1,2}(st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/i,
-  /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}\b/i,
-  /\d{1,2}\s*(am|pm)\b/i,
-  // Instagram/social-post chrome that sometimes gets OCR'd along with a
-  // screenshotted lineup graphic
-  /^\d+\s*posts?$/i,
-  /liked by/i,
-  /see translation/i,
-  /\d+\s*(days?|hours?|weeks?)\s*ago/i,
-];
-
-// Noise words/labels that sometimes appear attached directly to an artist
-// name with no separator (e.g. OCR reading "CASSIUS Live" as one chunk) —
-// stripped from the end of a token rather than only matched as a whole token.
-const TRAILING_NOISE_SUFFIX = /\s*\b(live|b2b|dj set|presents)\b\s*$/i;
-
-// A schedule-grid style poster (e.g. an Instagram post with a timetable)
-// mixes times in with names — these patterns catch that noise at the
-// token level, after splitting, since times often end up on their own
-// line/segment rather than a whole noise line.
-function looksLikeTimeOrJunk(token) {
-  if (/^\d{1,2}:\d{2}/.test(token)) return true; // "16:00", "17:00-18:00"
-  if (/^\d+([-–]\d+)?$/.test(token)) return true; // bare numbers/ranges
-  const digitCount = (token.match(/\d/g) || []).length;
-  // Mostly-digits tokens are almost always OCR noise (times, IDs) rather
-  // than an artist name — except the rare fully-numeric stage name, which
-  // tends to be long (e.g. "999999999"), so that's exempted.
-  if (digitCount / token.length > 0.4 && !/^\d+$/.test(token)) return true;
-  return false;
-}
-
-// Splits raw free-form text (pasted or OCR'd) into a clean artist list.
-// Handles one-per-line, comma-separated, and bullet-separated input (lineup
-// posters commonly use "·", "•", or "|" between names on the same line),
-// plus common noise (date/venue header lines, b2b/live/DJ-set labels, and
-// schedule-grid/social-media chrome for messier screenshot sources).
-function parseArtistsFromText(rawText) {
-  if (!rawText) return [];
-
-  const noiseWords = new Set([
-    'b2b', 'live', 'dj set', 'dj', 'presents', 'w/',
-    'posts', 'more', 'ago', 'others', 'and others',
-  ]);
-
-  const lines = rawText
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .filter((line) => !NOISE_LINE_PATTERNS.some((pattern) => pattern.test(line)));
-
-  return lines
-    .flatMap((line) => line.split(/[·•|,]/))
-    .map((token) => token.trim().replace(TRAILING_NOISE_SUFFIX, '').trim())
-    .filter(Boolean)
-    .filter((token) => !noiseWords.has(token.toLowerCase()))
-    .filter((token) => token.length >= 2 && token.length <= 60)
-    .filter((token) => !looksLikeTimeOrJunk(token))
-    // de-dupe, case-insensitive, keep first-seen casing
-    .filter((token, idx, arr) => arr.findIndex((t) => t.toLowerCase() === token.toLowerCase()) === idx);
-}
-
-// POST /api/extract-image  (multipart form, field name "image")
-// Runs OCR on an uploaded lineup screenshot and returns the raw text plus
-// a best-effort parsed artist list, for the user to review/edit before matching.
-router.post('/extract-image', upload.single('image'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image uploaded.' });
+// POST /api/agent/find-event { query }
+// Uses Claude + web search to find candidate events matching a free-text
+// query. Returns up to 3 candidates for the user to confirm before we
+// spend a second agent call looking for the actual lineup.
+router.post('/agent/find-event', async (req, res) => {
+  const { query } = req.body;
+  if (!query || !query.trim()) {
+    return res.status(400).json({ error: 'Please enter an event name or description.' });
   }
 
   try {
-    const rawText = await extractTextFromImage(req.file.buffer, req.file.mimetype);
-    const artists = parseArtistsFromText(rawText);
-    console.log(
-      `OCR on "${req.file.originalname}": extracted ${rawText.length} chars, parsed ${artists.length} artist candidates`
-    );
-    console.log('OCR raw text snippet:\n' + rawText.slice(0, 1000));
-    res.json({ rawText, artists });
+    const candidates = await agent.findEventCandidates(query.trim());
+    res.json({ candidates });
   } catch (err) {
-    console.error('OCR failed:', err.message);
-    res.status(500).json({ error: 'Failed to read text from that image.' });
+    console.error('Event search failed:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to search for that event.' });
   }
 });
 
-// POST /api/lineup-from-link { eventUrl }
-// Currently supports Dice.fm event links only. Resident Advisor (ra.co) is
-// intentionally not supported — it sits behind DataDome bot protection that
-// blocks this kind of automated fetch even with a real headless browser.
-router.post('/lineup-from-link', async (req, res) => {
-  const { eventUrl } = req.body;
-  if (!eventUrl) {
-    return res.status(400).json({ error: 'Please provide an event URL.' });
-  }
-
-  let hostname;
-  try {
-    hostname = new URL(eventUrl).hostname;
-  } catch (e) {
-    return res.status(400).json({ error: 'That doesn\'t look like a valid URL.' });
-  }
-
-  if (hostname.includes('ra.co')) {
-    return res.status(400).json({
-      error:
-        "Resident Advisor links aren't supported — RA blocks automated requests. Paste the lineup as text or upload a screenshot instead.",
-    });
-  }
-  if (!hostname.includes('dice.fm')) {
-    return res.status(400).json({ error: 'Only Dice.fm event links are supported right now.' });
+// POST /api/agent/lineup { candidate }
+// Given a confirmed event candidate, finds its full artist lineup.
+router.post('/agent/lineup', async (req, res) => {
+  const { candidate } = req.body;
+  if (!candidate || !candidate.title) {
+    return res.status(400).json({ error: 'Missing event details.' });
   }
 
   try {
-    const result = await scrapeDiceEvent(eventUrl);
-    const artists = result.artists.filter((name) => name && name.length >= 2 && name.length <= 60);
-    console.log(`Dice lineup fetch for "${eventUrl}": found ${artists.length} artists`);
-    if (artists.length === 0) {
+    const result = await agent.findLineupForEvent(candidate);
+    console.log(`Agent lineup for "${candidate.title}": found ${result.artists.length} artists`);
+    if (result.artists.length === 0) {
       return res.status(422).json({
-        error:
-          'Could not find a lineup on that page. If you used a link.dice.fm short link, try opening it in a browser first and pasting the full dice.fm/event/... URL instead.',
+        error: 'Could not find a lineup for that event — try a different search or check the source directly.',
       });
     }
-    res.json({ eventTitle: result.eventTitle, artists });
+    res.json(result);
   } catch (err) {
-    console.error('Dice lineup fetch failed:', err.response?.status, err.message);
-    res.status(500).json({ error: 'Failed to fetch or parse that event page.' });
+    console.error('Lineup search failed:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to search for the lineup.' });
   }
 });
 
@@ -172,8 +73,6 @@ router.post('/match', async (req, res) => {
   }
 
   try {
-    // Public search data — app-level Client Credentials token is enough here,
-    // but a logged-in user's token also works if present.
     const token = (await ensureFreshToken(req)) || (await sc.getAppToken());
 
     const results = {};

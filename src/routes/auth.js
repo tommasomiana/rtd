@@ -8,7 +8,6 @@ router.get('/login', (req, res) => {
   const { codeVerifier, codeChallenge } = sc.generatePkcePair();
   const state = sc.generateState();
 
-  // Stash these in the session so /callback can complete the exchange
   req.session.pkceVerifier = codeVerifier;
   req.session.oauthState = state;
 
@@ -42,7 +41,7 @@ router.get('/callback', async (req, res) => {
     delete req.session.pkceVerifier;
     delete req.session.oauthState;
 
-    res.redirect('/'); // back to the app, now logged in
+    res.redirect('/');
   } catch (err) {
     console.error('Token exchange failed:', err.response?.data || err.message);
     res.status(500).send('Login failed — check server logs.');

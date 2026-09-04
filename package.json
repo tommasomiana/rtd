@@ -1,7 +1,7 @@
 {
   "name": "rtd-ready-to-dance",
   "version": "1.0.0",
-  "description": "Paste or scan a lineup and get a SoundCloud playlist of the artists.",
+  "description": "Search for an event and get a SoundCloud playlist of the lineup.",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -10,11 +10,8 @@
   },
   "dependencies": {
     "axios": "^1.7.7",
-    "cheerio": "^1.0.0",
     "cookie-session": "^2.1.0",
     "dotenv": "^16.4.5",
-    "express": "^4.21.1",
-    "multer": "^1.4.5-lts.1",
-    "tesseract.js": "^5.1.1"
+    "express": "^4.21.1"
   }
 }

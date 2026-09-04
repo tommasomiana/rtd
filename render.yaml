@@ -12,5 +12,7 @@ services:
         sync: false
       - key: SOUNDCLOUD_REDIRECT_URI
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: SESSION_SECRET
         generateValue: true
