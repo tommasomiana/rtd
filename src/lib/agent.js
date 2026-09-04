@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5';
+const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
 
 /**
  * Calls the Anthropic Messages API with the web_search tool enabled.
@@ -14,7 +14,7 @@ async function callClaude(userPrompt) {
     API_URL,
     {
       model: MODEL,
-      max_tokens: 1500,
+      max_tokens: 4096,
       messages: [{ role: 'user', content: userPrompt }],
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
     },
@@ -28,23 +28,35 @@ async function callClaude(userPrompt) {
     }
   );
 
-  // The response mixes block types (text, server_tool_use, web_search_tool_result)
-  // — only the text blocks make up the model's actual answer.
+  if (res.data.stop_reason === 'max_tokens') {
+    console.warn('[agent] Response was truncated by max_tokens — consider raising the limit further.');
+  }
+
   const textBlocks = (res.data.content || []).filter((b) => b.type === 'text').map((b) => b.text);
   return textBlocks.join('\n').trim();
 }
 
-// Strips a ```json fence if the model wrapped its answer in one despite
-// being told not to, then parses. Returns null on any failure so callers
-// can handle a bad/empty agent response gracefully instead of crashing.
+// Strips a ```json fence if present, and — more importantly — extracts
+// just the outermost {...} object even if the model added explanatory
+// text before or after it (despite being told not to). Returns null on
+// any failure so callers can handle a bad/empty agent response gracefully
+// instead of crashing.
 function parseJsonSafe(text) {
   if (!text) return null;
-  const cleaned = text.replace(/^```json\s*|^```\s*|```\s*$/gm, '').trim();
+
+  let candidate = text.replace(/^```json\s*|^```\s*|```\s*$/gm, '').trim();
+
+  const firstBrace = candidate.indexOf('{');
+  const lastBrace = candidate.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidate = candidate.slice(firstBrace, lastBrace + 1);
+  }
+
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(candidate);
   } catch (e) {
     console.error('[agent] Failed to parse JSON from model response:', e.message);
-    console.error('[agent] Raw response was:', text.slice(0, 500));
+    console.error('[agent] Raw response was:', text.slice(0, 1000));
     return null;
   }
 }
@@ -57,7 +69,7 @@ async function findEventCandidates(query) {
 
 Identify up to 3 candidate events that best match. For each, include the event title, date, venue/location, a source URL (the page you found it on — Resident Advisor, Dice.fm, an official festival site, Instagram, etc.), and the source name.
 
-Respond with ONLY valid JSON, no other text, no markdown code fences, in exactly this shape:
+Respond with ONLY valid JSON — no explanation, no preamble like "here are the results", no markdown code fences. Your entire response must be exactly the JSON object below and nothing else:
 {"candidates":[{"title":"...","date":"...","venue":"...","url":"...","source":"..."}]}
 
 If you can't find any confident matches, respond with:
@@ -81,7 +93,7 @@ Source: ${candidate.url || 'unknown'}
 
 List every performing artist/DJ by name — no hosts, no venue names, no stage names used as section headers, no generic labels. Deduplicate the list.
 
-Respond with ONLY valid JSON, no other text, no markdown code fences, in exactly this shape:
+Respond with ONLY valid JSON — no explanation, no preamble, no markdown code fences. Your entire response must be exactly the JSON object below and nothing else:
 {"eventTitle":"...","artists":["Name1","Name2","..."]}
 
 If you can't find a lineup at all, respond with:
