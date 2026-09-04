@@ -40,14 +40,22 @@ async function getAppToken() {
   if (appToken && appToken.expires_at > Date.now() + 5000) {
     return appToken.access_token;
   }
+  // SoundCloud's client_credentials flow requires the client_id/secret as
+  // an HTTP Basic Auth header, not as body params (which is what the
+  // Authorization Code flow above still uses successfully) — sending them
+  // in the body here returns a misleading "invalid_client" error instead
+  // of a clearer auth-format error.
+  const basicAuth = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
   const res = await axios.post(
     TOKEN_URL,
-    new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-    }),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    new URLSearchParams({ grant_type: 'client_credentials' }),
+    {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${basicAuth}`,
+        Accept: 'application/json; charset=utf-8',
+      },
+    }
   );
   appToken = {
     access_token: res.data.access_token,
