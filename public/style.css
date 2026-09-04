@@ -444,8 +444,8 @@ input[type="text"], input[type="url"] {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 4px 8px;
-  padding: 12px 0 4px;
+  gap: 10px 14px;
+  padding: 20px 8px;
 }
 
 .bubble {
@@ -454,13 +454,34 @@ input[type="text"], input[type="url"] {
   align-items: center;
   gap: 6px;
   width: 78px;
-  animation: bubble-float 3.2s ease-in-out infinite;
+  cursor: default;
+  animation-name: bubble-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  transition: transform 0.2s ease;
+}
+
+.bubble:hover {
+  transform: scale(1.18) !important;
+  z-index: 5;
+  animation-play-state: paused;
+}
+
+.bubble:hover .avatar,
+.bubble:hover .avatar-placeholder {
+  border-color: var(--accent);
+  box-shadow: 0 0 16px rgba(255, 61, 26, 0.4);
+}
+
+.bubble:hover .bubble-name {
+  color: var(--text);
 }
 
 .bubble .avatar {
-  width: 56px;
-  height: 56px;
+  width: var(--bubble-size, 60px);
+  height: var(--bubble-size, 60px);
   border: 2px solid var(--border);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .bubble.no-match .avatar {
@@ -477,6 +498,7 @@ input[type="text"], input[type="url"] {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+  transition: color 0.2s;
 }
 
 .bubble-more {
@@ -488,8 +510,8 @@ input[type="text"], input[type="url"] {
 }
 
 .bubble-more .avatar-placeholder {
-  width: 56px;
-  height: 56px;
+  width: var(--bubble-size, 64px);
+  height: var(--bubble-size, 64px);
   border: 2px dashed var(--accent);
   display: flex;
   align-items: center;
@@ -499,11 +521,15 @@ input[type="text"], input[type="url"] {
   font-size: 0.9rem;
   color: var(--accent);
   border-radius: 50%;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-@keyframes bubble-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+@keyframes bubble-drift {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(var(--dx1, 10px), var(--dy1, -10px)); }
+  50%  { transform: translate(var(--dx2, -10px), var(--dy2, 10px)); }
+  75%  { transform: translate(var(--dx3, 8px), var(--dy3, 8px)); }
+  100% { transform: translate(0, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

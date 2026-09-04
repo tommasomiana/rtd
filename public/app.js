@@ -172,6 +172,35 @@ async function matchArtists(artists) {
 const BUBBLE_PREVIEW_LIMIT = 8;
 let currentView = 'bubble';
 
+function shuffled(arr) {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+// Picks which artists to show as bubbles: randomized order each time, and
+// artists with a real profile photo are preferred over ones without (a
+// placeholder icon reads as less interesting/trustworthy in a compact
+// preview), only falling back to no-photo artists if there aren't enough
+// with photos to fill the preview.
+function pickBubbleArtists(artists, matches, limit) {
+  const withPhoto = [];
+  const withoutPhoto = [];
+  artists.forEach((artist) => {
+    const data = matches[artist] || {};
+    if (data.matchedUser?.avatar_url) withPhoto.push(artist);
+    else withoutPhoto.push(artist);
+  });
+  return [...shuffled(withPhoto), ...shuffled(withoutPhoto)].slice(0, limit);
+}
+
+function randomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
 function renderLineup(artists, matches) {
   currentView = 'bubble';
   toggleViewBtn.textContent = '☰ List view';
@@ -195,16 +224,26 @@ function artistAvatarHtml(matchedUser) {
 function renderBubbleView(artists, matches) {
   bubbleViewEl.innerHTML = '';
 
-  const shown = artists.slice(0, BUBBLE_PREVIEW_LIMIT);
+  const shown = pickBubbleArtists(artists, matches, BUBBLE_PREVIEW_LIMIT);
   const remaining = artists.length - shown.length;
 
-  shown.forEach((artist, i) => {
+  shown.forEach((artist) => {
     const data = matches[artist] || { matchedUser: null, tracks: [] };
     const hasMatch = (data.tracks || []).length > 0;
 
+    const size = Math.round(randomBetween(48, 76));
+
     const bubble = document.createElement('div');
     bubble.className = 'bubble' + (hasMatch ? '' : ' no-match');
-    bubble.style.animationDelay = `${(i % 5) * 0.3}s`;
+    bubble.style.setProperty('--bubble-size', `${size}px`);
+    bubble.style.setProperty('--dx1', `${randomBetween(-18, 18).toFixed(0)}px`);
+    bubble.style.setProperty('--dy1', `${randomBetween(-14, 14).toFixed(0)}px`);
+    bubble.style.setProperty('--dx2', `${randomBetween(-18, 18).toFixed(0)}px`);
+    bubble.style.setProperty('--dy2', `${randomBetween(-14, 14).toFixed(0)}px`);
+    bubble.style.setProperty('--dx3', `${randomBetween(-18, 18).toFixed(0)}px`);
+    bubble.style.setProperty('--dy3', `${randomBetween(-14, 14).toFixed(0)}px`);
+    bubble.style.animationDuration = `${randomBetween(5, 10).toFixed(1)}s`;
+    bubble.style.animationDelay = `-${randomBetween(0, 5).toFixed(1)}s`; // negative = starts mid-cycle, desyncs bubbles immediately
     bubble.innerHTML = `
       ${artistAvatarHtml(data.matchedUser)}
       <span class="bubble-name">${artist}</span>
@@ -215,7 +254,9 @@ function renderBubbleView(artists, matches) {
   if (remaining > 0) {
     const more = document.createElement('button');
     more.className = 'bubble bubble-more';
-    more.style.animationDelay = `${(shown.length % 5) * 0.3}s`;
+    more.style.setProperty('--bubble-size', '64px');
+    more.style.animationDuration = '7s';
+    more.style.animationDelay = `-${randomBetween(0, 5).toFixed(1)}s`;
     more.innerHTML = `
       <span class="avatar-placeholder">+${remaining}</span>
       <span class="bubble-name">See all</span>
@@ -289,15 +330,6 @@ function pickTracks(tracks, mode, count, includeDjSets) {
   const byPlaysDesc = [...eligible].sort((a, b) => b.playback_count - a.playback_count);
   const byPlaysAsc = [...eligible].sort((a, b) => a.playback_count - b.playback_count);
   const byNewest = [...eligible].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-  function shuffled(arr) {
-    const copy = [...arr];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-    }
-    return copy;
-  }
 
   switch (mode) {
     case 'hottest':
