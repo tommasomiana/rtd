@@ -410,10 +410,107 @@ input[type="text"], input[type="url"] {
   color: var(--text-dim);
 }
 
-/* --- Lineup / artist cards --- */
+/* --- Lineup: bubble view (default) + list view (toggle) --- */
 
 .lineup {
   margin-top: 4px;
+}
+
+.lineup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.lineup-count {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.view-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: auto;
+  margin: 0;
+}
+
+.bubble-view {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 8px;
+  padding: 12px 0 4px;
+}
+
+.bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 78px;
+  animation: bubble-float 3.2s ease-in-out infinite;
+}
+
+.bubble .avatar {
+  width: 56px;
+  height: 56px;
+  border: 2px solid var(--border);
+}
+
+.bubble.no-match .avatar {
+  border-color: var(--danger);
+  opacity: 0.5;
+}
+
+.bubble-name {
+  font-size: 0.72rem;
+  text-align: center;
+  color: var(--text-dim);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.bubble-more {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+.bubble-more .avatar-placeholder {
+  width: 56px;
+  height: 56px;
+  border: 2px dashed var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent);
+  border-radius: 50%;
+}
+
+@keyframes bubble-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble { animation: none; }
+}
+
+.list-view {
   display: grid;
   gap: 8px;
 }
@@ -559,9 +656,55 @@ input[type="text"], input[type="url"] {
   font-size: 0.88rem;
 }
 
-.cover-upload input[type="file"] {
-  color: var(--text-dim);
+.cover-upload-label {
+  color: var(--text);
+}
+
+.file-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-input-button {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-raised-2);
+  color: var(--text);
   font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.file-input-button:hover {
+  border-color: var(--accent);
+}
+
+.file-input-hidden:focus + .file-input-button {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.file-input-filename {
+  color: var(--text-dim);
+  font-size: 0.82rem;
 }
 
 .playlist-create {

@@ -7,17 +7,26 @@ const loadingEl = document.getElementById('loading');
 const loadingTextEl = document.getElementById('loading-text');
 const matchMessageEl = document.getElementById('match-message');
 const lineupEl = document.getElementById('lineup');
+const lineupCountLabelEl = document.getElementById('lineup-count-label');
+const toggleViewBtn = document.getElementById('toggle-view-btn');
+const bubbleViewEl = document.getElementById('bubble-view');
+const listViewEl = document.getElementById('list-view');
 
 const playlistActionsEl = document.getElementById('playlist-actions');
 const tracksPerArtistEl = document.getElementById('tracks-per-artist');
 const includeDjSetsEl = document.getElementById('include-dj-sets');
 const coverImageEl = document.getElementById('cover-image');
+const coverFilenameEl = document.getElementById('cover-filename');
 const playlistTitleInput = document.getElementById('playlist-title');
 const createPlaylistBtn = document.getElementById('create-playlist-btn');
 const createRequirementsEl = document.getElementById('create-requirements');
 const playlistMessageEl = document.getElementById('playlist-message');
 
 const PENDING_KEY = 'rtd_pending_playlist';
+
+coverImageEl.addEventListener('change', () => {
+  coverFilenameEl.textContent = coverImageEl.files[0]?.name || 'No file chosen';
+});
 
 let currentMatches = {}; // { artistName: { matchedUser, tracks } }
 let excludedArtists = new Set();
@@ -160,8 +169,64 @@ async function matchArtists(artists) {
   }
 }
 
+const BUBBLE_PREVIEW_LIMIT = 8;
+let currentView = 'bubble';
+
 function renderLineup(artists, matches) {
-  lineupEl.innerHTML = '';
+  currentView = 'bubble';
+  toggleViewBtn.textContent = '☰ List view';
+  bubbleViewEl.classList.remove('hidden');
+  listViewEl.classList.add('hidden');
+
+  lineupCountLabelEl.textContent = `${artists.length} artist${artists.length === 1 ? '' : 's'} found`;
+
+  renderBubbleView(artists, matches);
+  renderListView(artists, matches);
+
+  lineupEl.classList.remove('hidden');
+}
+
+function artistAvatarHtml(matchedUser) {
+  return matchedUser?.avatar_url
+    ? `<img class="avatar" src="${matchedUser.avatar_url}" alt="" />`
+    : `<span class="avatar avatar-placeholder"></span>`;
+}
+
+function renderBubbleView(artists, matches) {
+  bubbleViewEl.innerHTML = '';
+
+  const shown = artists.slice(0, BUBBLE_PREVIEW_LIMIT);
+  const remaining = artists.length - shown.length;
+
+  shown.forEach((artist, i) => {
+    const data = matches[artist] || { matchedUser: null, tracks: [] };
+    const hasMatch = (data.tracks || []).length > 0;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble' + (hasMatch ? '' : ' no-match');
+    bubble.style.animationDelay = `${(i % 5) * 0.3}s`;
+    bubble.innerHTML = `
+      ${artistAvatarHtml(data.matchedUser)}
+      <span class="bubble-name">${artist}</span>
+    `;
+    bubbleViewEl.appendChild(bubble);
+  });
+
+  if (remaining > 0) {
+    const more = document.createElement('button');
+    more.className = 'bubble bubble-more';
+    more.style.animationDelay = `${(shown.length % 5) * 0.3}s`;
+    more.innerHTML = `
+      <span class="avatar-placeholder">+${remaining}</span>
+      <span class="bubble-name">See all</span>
+    `;
+    more.onclick = () => switchView('list');
+    bubbleViewEl.appendChild(more);
+  }
+}
+
+function renderListView(artists, matches) {
+  listViewEl.innerHTML = '';
   artists.forEach((artist) => {
     const data = matches[artist] || { matchedUser: null, tracks: [] };
     const tracks = data.tracks || [];
@@ -171,16 +236,12 @@ function renderLineup(artists, matches) {
     const card = document.createElement('div');
     card.className = 'artist-card' + (hasMatch ? '' : ' no-match');
 
-    const avatarHtml = matchedUser?.avatar_url
-      ? `<img class="avatar" src="${matchedUser.avatar_url}" alt="" />`
-      : `<span class="avatar avatar-placeholder"></span>`;
-
     const matchedAsHtml = matchedUser ? `<span class="matched-as">as ${matchedUser.username}</span>` : '';
 
     const checkboxId = `include-${artist.replace(/\W+/g, '-')}`;
     card.innerHTML = `
       <input type="checkbox" id="${checkboxId}" ${hasMatch ? 'checked' : 'disabled'} />
-      ${avatarHtml}
+      ${artistAvatarHtml(matchedUser)}
       <label class="info" for="${checkboxId}">
         <span class="name-block">
           <span class="name">${artist}</span>
@@ -203,10 +264,19 @@ function renderLineup(artists, matches) {
 
     if (!hasMatch) excludedArtists.add(artist);
 
-    lineupEl.appendChild(card);
+    listViewEl.appendChild(card);
   });
-  lineupEl.classList.remove('hidden');
 }
+
+function switchView(view) {
+  currentView = view;
+  const isBubble = view === 'bubble';
+  bubbleViewEl.classList.toggle('hidden', !isBubble);
+  listViewEl.classList.toggle('hidden', isBubble);
+  toggleViewBtn.textContent = isBubble ? '☰ List view' : '🫧 Bubble view';
+}
+
+toggleViewBtn.onclick = () => switchView(currentView === 'bubble' ? 'list' : 'bubble');
 
 // --- Track selection modes ----------------------------------------------
 
@@ -238,13 +308,6 @@ function pickTracks(tracks, mode, count, includeDjSets) {
       return byNewest.slice(0, count);
     case 'random':
       return shuffled(eligible).slice(0, count);
-    case 'mixed': {
-      const topCount = Math.ceil(count / 2);
-      const top = byPlaysDesc.slice(0, topCount);
-      const topIds = new Set(top.map((t) => t.id));
-      const rest = shuffled(eligible.filter((t) => !topIds.has(t.id)));
-      return [...top, ...rest.slice(0, count - top.length)];
-    }
     default:
       return byPlaysDesc.slice(0, count);
   }

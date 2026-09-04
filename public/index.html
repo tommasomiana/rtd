@@ -39,7 +39,14 @@
 
         <p id="match-message" class="section-message hidden"></p>
 
-        <section id="lineup" class="lineup hidden"></section>
+        <section id="lineup" class="lineup hidden">
+          <div class="lineup-header">
+            <span id="lineup-count-label" class="lineup-count"></span>
+            <button id="toggle-view-btn" class="view-toggle" type="button">☰ List view</button>
+          </div>
+          <div id="bubble-view" class="bubble-view"></div>
+          <div id="list-view" class="list-view hidden"></div>
+        </section>
       </div>
     </section>
 
@@ -64,10 +71,6 @@
               <input type="radio" name="mode" value="fresh" />
               <span>🆕 Freshest</span>
             </label>
-            <label class="mode-option">
-              <input type="radio" name="mode" value="mixed" />
-              <span>🎯 Mixed bag</span>
-            </label>
           </div>
         </div>
 
@@ -80,10 +83,14 @@
             <input type="checkbox" id="include-dj-sets" />
             <span>Include DJ sets / long mixes</span>
           </label>
-          <label class="cover-upload">
-            <span>Cover image (optional)</span>
-            <input id="cover-image" type="file" accept="image/*" />
-          </label>
+          <div class="cover-upload">
+            <span class="cover-upload-label">Cover image (optional)</span>
+            <div class="file-input-row">
+              <input id="cover-image" type="file" accept="image/*" class="file-input-hidden" />
+              <label for="cover-image" class="file-input-button">📁 Choose image</label>
+              <span id="cover-filename" class="file-input-filename">No file chosen</span>
+            </div>
+          </div>
         </div>
 
         <div class="playlist-create">
