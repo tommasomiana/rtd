@@ -25,6 +25,14 @@ const createPlaylistBtn = document.getElementById('create-playlist-btn');
 const createRequirementsEl = document.getElementById('create-requirements');
 const playlistMessageEl = document.getElementById('playlist-message');
 
+const successModalEl = document.getElementById('success-modal');
+const modalCloseBtn = document.getElementById('modal-close-btn');
+const modalCoverImgEl = document.getElementById('modal-cover-img');
+const modalCoverPlaceholderEl = document.getElementById('modal-cover-placeholder');
+const modalPlaylistNameEl = document.getElementById('modal-playlist-name');
+const modalBubblesEl = document.getElementById('modal-bubbles');
+const modalOpenLinkEl = document.getElementById('modal-open-link');
+
 const PENDING_KEY = 'rtd_pending_playlist';
 
 coverImageEl.addEventListener('change', () => {
@@ -269,6 +277,31 @@ function artistAvatarHtml(matchedUser) {
     : `<span class="avatar avatar-placeholder"></span>`;
 }
 
+// Shared by the lineup bubble view and the success modal — builds one
+// floating bubble element with randomized size/drift so both places get
+// the same lively look without duplicating the randomization logic.
+function makeBubbleElement(artist, data, { minSize = 48, maxSize = 76 } = {}) {
+  const hasMatch = (data.tracks || []).length > 0;
+  const size = Math.round(randomBetween(minSize, maxSize));
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble' + (hasMatch ? '' : ' no-match');
+  bubble.style.setProperty('--bubble-size', `${size}px`);
+  bubble.style.setProperty('--dx1', `${randomBetween(-18, 18).toFixed(0)}px`);
+  bubble.style.setProperty('--dy1', `${randomBetween(-14, 14).toFixed(0)}px`);
+  bubble.style.setProperty('--dx2', `${randomBetween(-18, 18).toFixed(0)}px`);
+  bubble.style.setProperty('--dy2', `${randomBetween(-14, 14).toFixed(0)}px`);
+  bubble.style.setProperty('--dx3', `${randomBetween(-18, 18).toFixed(0)}px`);
+  bubble.style.setProperty('--dy3', `${randomBetween(-14, 14).toFixed(0)}px`);
+  bubble.style.animationDuration = `${randomBetween(5, 10).toFixed(1)}s`;
+  bubble.style.animationDelay = `-${randomBetween(0, 5).toFixed(1)}s`; // negative = starts mid-cycle, desyncs bubbles immediately
+  bubble.innerHTML = `
+    ${artistAvatarHtml(data.matchedUser)}
+    <span class="bubble-name">${artist}</span>
+  `;
+  return bubble;
+}
+
 function renderBubbleView(artists, matches) {
   bubbleViewEl.innerHTML = '';
 
@@ -277,26 +310,7 @@ function renderBubbleView(artists, matches) {
 
   shown.forEach((artist) => {
     const data = matches[artist] || { matchedUser: null, tracks: [] };
-    const hasMatch = (data.tracks || []).length > 0;
-
-    const size = Math.round(randomBetween(48, 76));
-
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble' + (hasMatch ? '' : ' no-match');
-    bubble.style.setProperty('--bubble-size', `${size}px`);
-    bubble.style.setProperty('--dx1', `${randomBetween(-18, 18).toFixed(0)}px`);
-    bubble.style.setProperty('--dy1', `${randomBetween(-14, 14).toFixed(0)}px`);
-    bubble.style.setProperty('--dx2', `${randomBetween(-18, 18).toFixed(0)}px`);
-    bubble.style.setProperty('--dy2', `${randomBetween(-14, 14).toFixed(0)}px`);
-    bubble.style.setProperty('--dx3', `${randomBetween(-18, 18).toFixed(0)}px`);
-    bubble.style.setProperty('--dy3', `${randomBetween(-14, 14).toFixed(0)}px`);
-    bubble.style.animationDuration = `${randomBetween(5, 10).toFixed(1)}s`;
-    bubble.style.animationDelay = `-${randomBetween(0, 5).toFixed(1)}s`; // negative = starts mid-cycle, desyncs bubbles immediately
-    bubble.innerHTML = `
-      ${artistAvatarHtml(data.matchedUser)}
-      <span class="bubble-name">${artist}</span>
-    `;
-    bubbleViewEl.appendChild(bubble);
+    bubbleViewEl.appendChild(makeBubbleElement(artist, data));
   });
 
   if (remaining > 0) {
@@ -505,23 +519,20 @@ createPlaylistBtn.onclick = async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
 
-    let artworkNote = '';
+    let artworkFailed = false;
     const coverFile = coverImageEl.files[0];
     if (coverFile && data.id) {
       const formData = new FormData();
       formData.append('image', coverFile);
       const artRes = await fetch(`/api/playlist/${data.id}/artwork`, { method: 'PUT', body: formData });
-      if (!artRes.ok) {
-        artworkNote = ' (cover image upload failed, but the playlist itself is fine)';
-      }
+      artworkFailed = !artRes.ok;
     }
 
     sessionStorage.removeItem(PENDING_KEY);
-    showMessage(
-      playlistMessageEl,
-      `Playlist created${artworkNote} — <a href="${data.playlist_url}" target="_blank">open on SoundCloud</a>`,
-      'success'
-    );
+    showSuccessModal({ title, coverFile, playlistUrl: data.playlist_url });
+    if (artworkFailed) {
+      showMessage(playlistMessageEl, 'The playlist was created, but the cover image upload failed.', 'error');
+    }
   } catch (err) {
     showMessage(playlistMessageEl, err.message, 'error');
   } finally {
@@ -529,6 +540,72 @@ createPlaylistBtn.onclick = async () => {
     setLoading(createPlaylistBtn, false, 'Create playlist');
   }
 };
+
+// --- Success modal + confetti --------------------------------------------
+
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function showSuccessModal({ title, coverFile, playlistUrl }) {
+  modalPlaylistNameEl.textContent = title;
+  modalOpenLinkEl.href = playlistUrl;
+
+  if (coverFile) {
+    modalCoverImgEl.src = URL.createObjectURL(coverFile);
+    modalCoverImgEl.classList.remove('hidden');
+    modalCoverPlaceholderEl.classList.add('hidden');
+  } else {
+    modalCoverImgEl.classList.add('hidden');
+    modalCoverPlaceholderEl.classList.remove('hidden');
+  }
+
+  const includedArtists = Object.keys(currentMatches).filter(
+    (a) => !excludedArtists.has(a) && (currentMatches[a].tracks || []).length > 0
+  );
+  const shown = pickBubbleArtists(includedArtists, currentMatches, 5);
+  modalBubblesEl.innerHTML = '';
+  shown.forEach((artist) => {
+    const data = currentMatches[artist];
+    modalBubblesEl.appendChild(makeBubbleElement(artist, data, { minSize: 44, maxSize: 60 }));
+  });
+
+  successModalEl.classList.remove('hidden');
+  launchConfetti();
+}
+
+function closeSuccessModal() {
+  successModalEl.classList.add('hidden');
+}
+
+modalCloseBtn.onclick = closeSuccessModal;
+successModalEl.addEventListener('click', (e) => {
+  if (e.target === successModalEl) closeSuccessModal();
+});
+
+function launchConfetti() {
+  if (prefersReducedMotion) return;
+
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+  document.body.appendChild(container);
+
+  const colors = ['#ff3d1a', '#7c3aed', '#22d3a0', '#ffce45', '#f3f1f7'];
+
+  for (let i = 0; i < 70; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = `${randomBetween(0, 100)}vw`;
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.width = `${Math.round(randomBetween(6, 10))}px`;
+    piece.style.height = `${Math.round(randomBetween(10, 16))}px`;
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    piece.style.animationDuration = `${randomBetween(2.5, 4.5).toFixed(2)}s`;
+    piece.style.animationDelay = `${randomBetween(0, 0.6).toFixed(2)}s`;
+    piece.addEventListener('animationend', () => piece.remove());
+    container.appendChild(piece);
+  }
+
+  setTimeout(() => container.remove(), 6000);
+}
 
 // --- Small helpers ----------------------------------------------------
 
