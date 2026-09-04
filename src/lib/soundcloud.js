@@ -162,6 +162,38 @@ async function getUserTracks(userId, token, limit) {
   return [];
 }
 
+// Tracks a user REPOSTED to their own profile — e.g. a DJ set actually
+// recorded/uploaded by a promoter or radio show account, which the artist
+// then reposted themselves. A repost is the artist's own endorsement that
+// the track is genuinely theirs, which is more reliable than matching on
+// title text alone.
+//
+// This endpoint has a messy history: SoundCloud's public API had no way
+// to fetch a user's reposts for years (long-standing, publicly tracked
+// gaps), so this may or may not actually work depending on the current
+// state of their API. Failing gracefully here (treat any error as "no
+// reposts available") means trying it costs nothing if it's unavailable.
+async function getUserReposts(userId, token, limit) {
+  try {
+    const res = await axios.get(`${API_BASE}/users/${userId}/reposts/tracks`, {
+      headers: { Authorization: `OAuth ${token}` },
+      params: { limit },
+    });
+    const data = res.data;
+    const items = Array.isArray(data) ? data : Array.isArray(data?.collection) ? data.collection : [];
+    // Repost items may wrap the actual track under a `track` key, or just
+    // be the track itself depending on the response shape — handle both.
+    const tracks = items.map((item) => item.track || item).filter(Boolean);
+    console.log(`[user-reposts] user ${userId}: found ${tracks.length} reposted tracks`);
+    return tracks;
+  } catch (err) {
+    console.log(
+      `[user-reposts] user ${userId}: endpoint unavailable (${err.response?.status || err.message}) — skipping`
+    );
+    return [];
+  }
+}
+
 // Gets a pool of tracks that genuinely belong to an artist, rather than
 // just any track whose title/description happens to mention their name.
 // Looks up their actual SoundCloud profile first and pulls from their own
@@ -175,9 +207,20 @@ async function searchArtistTracks(artistName, token, poolSize = 15) {
   const user = await findArtistUser(artistName, token);
 
   if (user) {
-    const tracks = await getUserTracks(user.id, token, poolSize);
-    if (tracks.length > 0) {
-      return { matchedUser: user, tracks };
+    const [ownTracks, repostedTracks] = await Promise.all([
+      getUserTracks(user.id, token, poolSize),
+      getUserReposts(user.id, token, poolSize),
+    ]);
+
+    const seenIds = new Set();
+    const combined = [...ownTracks, ...repostedTracks].filter((t) => {
+      if (!t.id || seenIds.has(t.id)) return false;
+      seenIds.add(t.id);
+      return true;
+    });
+
+    if (combined.length > 0) {
+      return { matchedUser: user, tracks: combined.slice(0, poolSize) };
     }
   }
 
@@ -188,12 +231,23 @@ async function searchArtistTracks(artistName, token, poolSize = 15) {
   const allTracks = res.data || [];
   const needle = normalizeForCompare(artistName);
   const tracks = allTracks
-    .filter((t) => t.user?.username && normalizeForCompare(t.user.username).includes(needle))
+    .filter(
+      (t) =>
+        (t.user?.username && normalizeForCompare(t.user.username).includes(needle)) ||
+        (user && t.user?.id === user.id)
+    )
     .slice(0, poolSize);
 
   console.log(
     `[artist-match] "${artistName}" fallback keyword search: ${allTracks.length} raw results, ${tracks.length} kept after uploader-name filter`
   );
+
+  if (tracks.length === 0 && allTracks.length > 0) {
+    console.log(
+      `[artist-match] "${artistName}" raw result uploaders:`,
+      allTracks.slice(0, 15).map((t) => `"${t.title}" by ${t.user?.username || 'unknown'}`)
+    );
+  }
 
   return { matchedUser: user || null, tracks };
 }
