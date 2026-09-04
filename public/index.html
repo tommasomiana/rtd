@@ -22,15 +22,6 @@
 
     <section class="step">
       <span class="step-num">1</span>
-      <section id="auth-banner" class="auth-banner">
-        <span id="auth-icon">●</span>
-        <span id="auth-text">Connect SoundCloud</span>
-        <a id="auth-action" href="/auth/login" class="auth-button">Connect</a>
-      </section>
-    </section>
-
-    <section class="step">
-      <span class="step-num">2</span>
       <div class="step-body">
         <div class="panel">
           <input id="event-query" type="text" placeholder="e.g. Brunch Electronik 2026, Barcelona" />
@@ -41,16 +32,19 @@
 
         <div id="candidates" class="candidates hidden"></div>
 
-        <div id="lineup-review" class="panel hidden">
-          <p class="hint">Review the lineup — edit if needed.</p>
-          <textarea id="lineup-text" rows="6"></textarea>
-          <p id="lineup-message" class="section-message hidden"></p>
-        </div>
+        <section id="loading" class="loading hidden">
+          <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+          <span id="loading-text">Loading...</span>
+        </section>
+
+        <p id="match-message" class="section-message hidden"></p>
+
+        <section id="lineup" class="lineup hidden"></section>
       </div>
     </section>
 
-    <section class="step">
-      <span class="step-num">3</span>
+    <section id="playlist-actions" class="step hidden">
+      <span class="step-num">2</span>
       <div class="step-body">
         <div class="mode-picker">
           <div class="mode-options">
@@ -77,23 +71,6 @@
           </div>
         </div>
 
-        <button id="find-btn" disabled>Find artists</button>
-        <p id="find-requirements" class="section-message hint-message"></p>
-
-        <section id="loading" class="loading hidden">
-          <span class="eq-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-          <span id="loading-text">Loading...</span>
-        </section>
-
-        <p id="match-message" class="section-message hidden"></p>
-
-        <section id="lineup" class="lineup hidden"></section>
-      </div>
-    </section>
-
-    <section id="playlist-actions" class="step hidden">
-      <span class="step-num">4</span>
-      <div class="step-body">
         <div class="playlist-config">
           <label class="tracks-per-artist">
             <span>Tracks per artist</span>
@@ -103,10 +80,16 @@
             <input type="checkbox" id="include-dj-sets" />
             <span>Include DJ sets / long mixes</span>
           </label>
+          <label class="cover-upload">
+            <span>Cover image (optional)</span>
+            <input id="cover-image" type="file" accept="image/*" />
+          </label>
         </div>
+
         <div class="playlist-create">
           <input id="playlist-title" type="text" placeholder="Playlist name" />
-          <button id="create-playlist-btn">Create playlist</button>
+          <button id="create-playlist-btn" disabled>Create playlist</button>
+          <p id="create-requirements" class="section-message hint-message"></p>
         </div>
         <p id="playlist-message" class="section-message hidden"></p>
       </div>

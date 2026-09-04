@@ -1,8 +1,13 @@
 const express = require('express');
+const multer = require('multer');
 const sc = require('../lib/soundcloud');
 const agent = require('../lib/agent');
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
+});
 
 // Makes sure req.session.soundcloud.access_token is valid, refreshing if needed
 async function ensureFreshToken(req) {
@@ -126,10 +131,34 @@ router.post('/playlist', async (req, res) => {
   try {
     const token = await ensureFreshToken(req);
     const playlist = await sc.createPlaylist({ token, title, trackIds });
-    res.json({ playlist_url: playlist.permalink_url });
+    res.json({ id: playlist.id, playlist_url: playlist.permalink_url });
   } catch (err) {
     console.error('Playlist creation failed:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to create the playlist on SoundCloud.' });
+  }
+});
+
+// PUT /api/playlist/:id/artwork  (multipart form, field name "image")
+// Best-effort — sets a custom cover image on an already-created playlist.
+// Not confirmed to work (undocumented API behavior); failure here doesn't
+// mean the playlist itself failed, since it's created separately first.
+router.put('/playlist/:id/artwork', upload.single('image'), async (req, res) => {
+  if (!req.session.soundcloud) {
+    return res.status(401).json({ error: 'Connect your SoundCloud account first.' });
+  }
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image uploaded.' });
+  }
+
+  try {
+    const token = await ensureFreshToken(req);
+    await sc.updatePlaylistArtwork(req.params.id, token, req.file.buffer, req.file.originalname, req.file.mimetype);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Playlist artwork update failed:', err.response?.data || err.message);
+    res.status(500).json({
+      error: 'The playlist was created, but setting a custom cover image failed.',
+    });
   }
 });
 

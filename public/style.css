@@ -269,7 +269,7 @@ button.secondary {
   color: var(--text);
 }
 
-#find-btn, #create-playlist-btn, #search-event-btn {
+#create-playlist-btn, #search-event-btn {
   width: 100%;
   margin-top: 10px;
 }
@@ -550,6 +550,18 @@ input[type="text"], input[type="url"] {
   width: 16px;
   height: 16px;
   accent-color: var(--accent);
+}
+
+.cover-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.88rem;
+}
+
+.cover-upload input[type="file"] {
+  color: var(--text-dim);
+  font-size: 0.85rem;
 }
 
 .playlist-create {

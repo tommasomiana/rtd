@@ -1,5 +1,6 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const FormData = require('form-data');
 
 const TOKEN_URL = 'https://secure.soundcloud.com/oauth/token';
 const AUTHORIZE_URL = 'https://secure.soundcloud.com/authorize';
@@ -271,6 +272,25 @@ async function createPlaylist({ token, title, trackIds, isPublic = false }) {
   return res.data;
 }
 
+// Attempts to set a custom cover image on an existing playlist. SoundCloud's
+// help docs confirm playlists support custom artwork via their web UI
+// ("Replace image"), but the exact API parameter isn't publicly documented —
+// this mirrors the pattern used for track artwork (multipart artwork_data).
+// Unverified: if this doesn't work, the caller should treat it as a
+// non-fatal failure (the playlist itself is already created either way).
+async function updatePlaylistArtwork(playlistId, token, imageBuffer, filename, mimeType) {
+  const form = new FormData();
+  form.append('playlist[artwork_data]', imageBuffer, { filename, contentType: mimeType });
+
+  const res = await axios.put(`${API_BASE}/playlists/${playlistId}`, form, {
+    headers: {
+      Authorization: `OAuth ${token}`,
+      ...form.getHeaders(),
+    },
+  });
+  return res.data;
+}
+
 module.exports = {
   generatePkcePair,
   generateState,
@@ -280,4 +300,5 @@ module.exports = {
   refreshToken,
   searchArtistTracks,
   createPlaylist,
+  updatePlaylistArtwork,
 };
