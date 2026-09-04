@@ -17,6 +17,7 @@ const WEB_FETCH_TOOL = {
   name: 'web_fetch',
   max_uses: 2,
   max_content_tokens: 15000,
+  allowed_callers: ['direct'],
 };
 
 /**
