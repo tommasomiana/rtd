@@ -632,33 +632,87 @@ input[type="text"], input[type="url"] {
 
 /* --- Playlist config --- */
 
-.playlist-config {
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px;
+.playlist-details {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.tracks-per-artist {
+.duration-picker {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.9rem;
-  font-weight: 500;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.tracks-per-artist input[type="number"] {
-  width: 60px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
+.duration-readout {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  justify-content: center;
+}
+
+#duration-value {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 700;
   color: var(--text);
-  font-size: 0.9rem;
+}
+
+.duration-label {
+  font-size: 0.92rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.duration-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  margin: 14px 0 6px;
+  cursor: pointer;
+}
+
+.duration-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.duration-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.duration-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  line-height: 1.3;
   text-align: center;
+}
+
+.duration-scale span:last-child {
+  text-align: right;
+}
+
+#tracks-estimate {
+  text-align: center;
+  margin-top: 10px;
 }
 
 .dj-sets-toggle {

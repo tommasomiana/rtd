@@ -74,15 +74,25 @@
           </div>
         </div>
 
-        <div class="playlist-config">
-          <label class="tracks-per-artist">
-            <span>Tracks per artist</span>
-            <input id="tracks-per-artist" type="number" min="1" max="15" value="5" />
-          </label>
+        <div class="playlist-details panel">
+          <div class="duration-picker">
+            <div class="duration-readout">
+              <span id="duration-value">4h</span>
+              <span id="duration-label" class="duration-label">🎉 Full night out</span>
+            </div>
+            <input type="range" id="duration-slider" min="1" max="12" step="1" value="4" class="duration-slider" />
+            <div class="duration-scale">
+              <span>1h<br />Quick pre-game</span>
+              <span>12h<br />Deep investigation</span>
+            </div>
+            <p id="tracks-estimate" class="hint"></p>
+          </div>
+
           <label class="dj-sets-toggle">
             <input type="checkbox" id="include-dj-sets" />
             <span>Include DJ sets / long mixes</span>
           </label>
+
           <div class="cover-upload">
             <span class="cover-upload-label">Cover image (optional)</span>
             <div class="file-input-row">
@@ -91,10 +101,11 @@
               <span id="cover-filename" class="file-input-filename">No file chosen</span>
             </div>
           </div>
+
+          <input id="playlist-title" type="text" placeholder="Playlist name" />
         </div>
 
         <div class="playlist-create">
-          <input id="playlist-title" type="text" placeholder="Playlist name" />
           <button id="create-playlist-btn" disabled>Create playlist</button>
           <p id="create-requirements" class="section-message hint-message"></p>
         </div>

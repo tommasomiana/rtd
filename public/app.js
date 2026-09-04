@@ -13,7 +13,10 @@ const bubbleViewEl = document.getElementById('bubble-view');
 const listViewEl = document.getElementById('list-view');
 
 const playlistActionsEl = document.getElementById('playlist-actions');
-const tracksPerArtistEl = document.getElementById('tracks-per-artist');
+const durationSliderEl = document.getElementById('duration-slider');
+const durationValueEl = document.getElementById('duration-value');
+const durationLabelEl = document.getElementById('duration-label');
+const tracksEstimateEl = document.getElementById('tracks-estimate');
 const includeDjSetsEl = document.getElementById('include-dj-sets');
 const coverImageEl = document.getElementById('cover-image');
 const coverFilenameEl = document.getElementById('cover-filename');
@@ -27,6 +30,50 @@ const PENDING_KEY = 'rtd_pending_playlist';
 coverImageEl.addEventListener('change', () => {
   coverFilenameEl.textContent = coverImageEl.files[0]?.name || 'No file chosen';
 });
+
+// --- Duration slider: translates a "how many hours" choice into a
+// tracks-per-artist count, since that's what actually determines playlist
+// length. Assumes an average track length — a rough estimate, not exact,
+// since real track lengths vary (and DJ sets vary a lot more).
+const AVG_TRACK_MINUTES = 5;
+
+function labelForHours(hours) {
+  if (hours <= 2) return '⚡ Quick pre-game';
+  if (hours <= 4) return '🍹 Warm-up session';
+  if (hours <= 6) return '🎉 Full night out';
+  if (hours <= 8) return '🌙 All-nighter';
+  if (hours <= 10) return '🔭 Deep dive';
+  return '🕵️ Deep investigation';
+}
+
+function includedArtistCount() {
+  return Object.entries(currentMatches).filter(
+    ([artist, data]) => !excludedArtists.has(artist) && (data.tracks || []).length > 0
+  ).length;
+}
+
+function tracksPerArtistForDuration(hours) {
+  const count = includedArtistCount();
+  if (count === 0) return 1;
+  const totalTracks = (hours * 60) / AVG_TRACK_MINUTES;
+  return Math.min(15, Math.max(1, Math.round(totalTracks / count)));
+}
+
+function updateDurationDisplay() {
+  const hours = parseInt(durationSliderEl.value, 10);
+  durationValueEl.textContent = `${hours}h`;
+  durationLabelEl.textContent = labelForHours(hours);
+
+  const count = includedArtistCount();
+  if (count > 0) {
+    const perArtist = tracksPerArtistForDuration(hours);
+    tracksEstimateEl.textContent = `≈ ${perArtist} track${perArtist === 1 ? '' : 's'} per artist across ${count} artist${count === 1 ? '' : 's'} (assumes ~${AVG_TRACK_MINUTES} min/track)`;
+  } else {
+    tracksEstimateEl.textContent = '';
+  }
+}
+
+durationSliderEl.addEventListener('input', updateDurationDisplay);
 
 let currentMatches = {}; // { artistName: { matchedUser, tracks } }
 let excludedArtists = new Set();
@@ -160,6 +207,7 @@ async function matchArtists(artists) {
 
     playlistTitleInput.value = `RTD — ${currentEventTitle}`;
     playlistActionsEl.classList.remove('hidden');
+    updateDurationDisplay();
     updateCreateButtonState();
   } catch (err) {
     showMessage(matchMessageEl, err.message, 'error');
@@ -301,6 +349,7 @@ function renderListView(artists, matches) {
         excludedArtists.add(artist);
         card.classList.add('excluded');
       }
+      updateDurationDisplay();
     });
 
     if (!hasMatch) excludedArtists.add(artist);
@@ -359,7 +408,7 @@ function savePendingState(mode) {
     excludedArtists: [...excludedArtists],
     currentEventTitle,
     mode,
-    tracksPerArtist: tracksPerArtistEl.value,
+    durationHours: durationSliderEl.value,
     includeDjSets: includeDjSetsEl.checked,
     playlistTitle: playlistTitleInput.value,
   };
@@ -396,9 +445,10 @@ function restorePendingStateIfAny() {
       const radio = document.querySelector(`input[name="mode"][value="${state.mode}"]`);
       if (radio) radio.checked = true;
     }
-    tracksPerArtistEl.value = state.tracksPerArtist || 5;
+    durationSliderEl.value = state.durationHours || 4;
     includeDjSetsEl.checked = !!state.includeDjSets;
     playlistTitleInput.value = state.playlistTitle || '';
+    updateDurationDisplay();
     updateCreateButtonState();
 
     showMessage(playlistMessageEl, 'Welcome back — connected! Review and hit "Create playlist" to finish.', 'success');
@@ -426,7 +476,7 @@ createPlaylistBtn.onclick = async () => {
     return;
   }
 
-  const countPerArtist = Math.min(15, Math.max(1, parseInt(tracksPerArtistEl.value, 10) || 5));
+  const countPerArtist = tracksPerArtistForDuration(parseInt(durationSliderEl.value, 10));
   const includeDjSets = includeDjSetsEl.checked;
 
   const trackIds = Object.entries(currentMatches)
